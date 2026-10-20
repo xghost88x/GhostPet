@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.2-preview — Original Sprite Silhouette
+
+- Restored the original Ghost desktop sprite outline.
+- Reduced oversized dog/fox/dragon side shapes that looked like arms.
+
 ## v0.4.1-preview — Doorway Fix
 
 - Fixed pets getting stuck in front of the desktop house near screen edges.
