@@ -381,139 +381,202 @@ class HomePortal(QWidget):
 
 
 class CareConsole(QDialog):
+    """Compact shared-household care panel; the original PetState remains canonical."""
     def __init__(self, pet: "RoamingPet"):
         super().__init__()
         self.pet = pet
-        self.setWindowTitle("GhostPet • Pocket Care Console")
-        self.setMinimumWidth(380)
+        self.selected_id = "founder"
+        self.setWindowTitle("GhostPet • Pocket Care")
+        self.setFixedWidth(326)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
-        self.setObjectName("console")
         self.setStyleSheet("""
-            QDialog#console { background: #282b43; color: #ecf5f3; }
-            QLabel { color: #ecf5f3; }
-            QLabel#heading { color: #f8bed8; font-size: 19px; font-weight: 900; }
-            QLabel#subheading { color: #9cead5; font-size: 12px; letter-spacing: 1px; }
-            QLabel#status { color: #263f3b; font-size: 15px; font-weight: 800; }
-            QLabel#metric { color: #dbe7ef; font-weight: bold; }
-            QWidget#lcd { background: #b7d8ad; border: 7px solid #45566e; border-radius: 9px; }
-            QPushButton { background: #5b6389; border: 2px solid #8994bd; border-radius: 11px;
-                          color: white; padding: 11px; font-weight: bold; }
-            QPushButton:hover { background: #737da8; }
-            QPushButton:pressed { background: #394363; }
-            QProgressBar { color: #edf9ff; background: #454b67; border-radius: 6px;
-                           height: 15px; text-align: center; }
-            QProgressBar::chunk { background: #53cdb5; border-radius: 6px; }
-            QComboBox { background: #4a526e; color: white; border-radius: 5px; padding: 5px; }
+            QDialog { background:#f5ebdb; color:#463f34; }
+            QLabel { color:#463f34; }
+            QPushButton { background:#759278; color:white; border:0;
+                          border-radius:7px; padding:6px 7px; font-weight:600; }
+            QPushButton:hover { background:#5d7e64; }
+            QComboBox { background:#fff9ed; color:#463f34; border:1px solid #a3ab8b;
+                        border-radius:6px; padding:5px; }
+            QProgressBar { background:#dfd8c8; border:0; border-radius:4px;
+                           height:10px; text-align:center; color:transparent; }
+            QProgressBar::chunk { background:#83aa88; border-radius:4px; }
         """)
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(20, 17, 20, 18)
-        outer.setSpacing(11)
-
-        header = QLabel("✦  GHOSTPET  //  POCKET CARE")
-        header.setObjectName("heading")
-        outer.addWidget(header)
-        subtitle = QLabel("CLASSIC VIRTUAL COMPANION  •  V0.5 PREVIEW")
-        subtitle.setObjectName("subheading")
-        outer.addWidget(subtitle)
-
-        lcd = QWidget()
-        lcd.setObjectName("lcd")
-        lcd_layout = QVBoxLayout(lcd)
-        lcd_layout.setContentsMargins(4, 2, 4, 5)
-        self.display_sprite = PetSprite(pet.state, size=142)
-        lcd_layout.addWidget(self.display_sprite, alignment=Qt.AlignmentFlag.AlignHCenter)
+        outer.setContentsMargins(12, 10, 12, 10)
+        outer.setSpacing(6)
+        top = QHBoxLayout()
+        top.addWidget(QLabel("♡  Pocket Care"))
+        self.collapse = QPushButton("▾")
+        self.collapse.setFixedWidth(32)
+        self.collapse.clicked.connect(self.toggle_compact)
+        top.addWidget(self.collapse)
+        outer.addLayout(top)
+        self.selector = QComboBox()
+        self.selector.currentIndexChanged.connect(self.select_pet)
+        outer.addWidget(self.selector)
+        self.details = QWidget()
+        details = QVBoxLayout(self.details)
+        details.setContentsMargins(0, 0, 0, 0)
+        details.setSpacing(5)
+        overview = QHBoxLayout()
+        self.avatar = QLabel("🐭")
+        self.avatar.setFixedWidth(48)
+        self.avatar.setStyleSheet("font-size:32px;")
+        overview.addWidget(self.avatar)
         self.status = QLabel()
-        self.status.setObjectName("status")
-        self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lcd_layout.addWidget(self.status)
-        outer.addWidget(lcd)
-
-        self.stats: dict[str, QProgressBar] = {}
-        for label, attribute in (("🍓  Fullness", "hunger"),
-                                 ("♥  Happiness", "happiness"),
-                                 ("✧  Cleanliness", "cleanliness"),
-                                 ("☾  Energy", "energy")):
+        self.status.setWordWrap(True)
+        overview.addWidget(self.status, 1)
+        details.addLayout(overview)
+        self.stats = {}
+        for label, key in (("Food","hunger"),("Happy","happiness"),
+                           ("Clean","cleanliness"),("Energy","energy")):
             row = QHBoxLayout()
-            name = QLabel(label)
-            name.setObjectName("metric")
-            name.setFixedWidth(113)
+            title = QLabel(label)
+            title.setFixedWidth(46)
+            row.addWidget(title)
             bar = QProgressBar()
-            bar.setRange(0, 100)
-            row.addWidget(name)
-            row.addWidget(bar)
-            outer.addLayout(row)
-            self.stats[attribute] = bar
-
-        buttons = QGridLayout()
-        for index, (label, action) in enumerate((
-            ("🍓  FEED", "feed"), ("🎮  PLAY", "play"),
-            ("🧼  CLEAN", "clean"), ("💤  SLEEP / WAKE", "sleep"),
-        )):
-            button = QPushButton(label)
-            button.clicked.connect(lambda _checked=False, a=action: self.pet.care(a))
-            buttons.addWidget(button, index // 2, index % 2)
-        outer.addLayout(buttons)
-
-        activity_row = QHBoxLayout()
-        for label, callback in (("♥ PET DIRECTLY", self.pet.open_cuddles),
-                                ("⌂ LITTLE HOUSE", self.pet.open_house)):
-            button = QPushButton(label)
-            button.clicked.connect(callback)
-            activity_row.addWidget(button)
-        outer.addLayout(activity_row)
-        nursery_button = QPushButton("🥚 ADOPTION NURSERY")
-        nursery_button.clicked.connect(self.pet.open_nursery)
-        outer.addWidget(nursery_button)
+            bar.setRange(0,100)
+            bar.setTextVisible(False)
+            row.addWidget(bar,1)
+            amount = QLabel()
+            amount.setFixedWidth(35)
+            row.addWidget(amount)
+            details.addLayout(row)
+            self.stats[key] = (bar, amount)
+        actions = QGridLayout()
+        for i,(label,action) in enumerate((("🍎 Feed","feed"),("🎾 Play","play"),
+                                            ("🫧 Clean","clean"),("💤 Sleep","sleep"))):
+            btn = QPushButton(label)
+            btn.clicked.connect(lambda checked=False, a=action: self.care_selected(a))
+            actions.addWidget(btn,i//2,i%2)
+        details.addLayout(actions)
+        nav = QHBoxLayout()
+        for label,action in (("🏡 House",pet.open_house),("🥚 Nursery",pet.open_nursery)):
+            btn = QPushButton(label)
+            btn.clicked.connect(action)
+            nav.addWidget(btn)
+        details.addLayout(nav)
         self.personality_label = QLabel()
         self.personality_label.setWordWrap(True)
-        outer.addWidget(self.personality_label)
-
-        footer = QHBoxLayout()
+        details.addWidget(self.personality_label)
+        extras = QHBoxLayout()
         rename = QPushButton("✎ Rename")
         rename.clicked.connect(self.rename_pet)
-        footer.addWidget(rename)
-        self.roaming_button = QPushButton()
-        self.roaming_button.clicked.connect(self.pet.toggle_roaming)
-        footer.addWidget(self.roaming_button)
-        outer.addLayout(footer)
-
+        extras.addWidget(rename)
+        self.roaming_button = QPushButton("Walk")
+        self.roaming_button.clicked.connect(pet.toggle_roaming)
+        extras.addWidget(self.roaming_button)
+        details.addLayout(extras)
         color_row = QHBoxLayout()
-        color_row.addWidget(QLabel("Shell color:"))
+        color_row.addWidget(QLabel("Founder color:"))
         self.colors = QComboBox()
         self.colors.addItems(list(PALETTES))
-        self.colors.setCurrentText(self.pet.state.color)
-        self.colors.currentTextChanged.connect(self.pet.change_color)
+        self.colors.setCurrentText(pet.state.color)
+        self.colors.currentTextChanged.connect(pet.change_color)
         color_row.addWidget(self.colors)
-        outer.addLayout(color_row)
-
-        self.tip = QLabel("Click the little pet to open this console anytime.")
+        details.addLayout(color_row)
+        outer.addWidget(self.details)
+        self.tip = QLabel("Choose a pet to care for.")
         self.tip.setWordWrap(True)
-        self.tip.setStyleSheet("color: #b5bed4; font-size: 11px;")
         outer.addWidget(self.tip)
         self.refresh()
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
         self.timer.start(1000)
 
-    def rename_pet(self) -> None:
-        name, accepted = QInputDialog.getText(self, "Name your pet", "Pet name:", text=self.pet.state.name)
+    def household_pet(self):
+        if self.selected_id == "founder":
+            return None
+        return next((p for p in (self.pet.state.adopted_pets or [])
+                     if p.get("id") == self.selected_id), None)
+
+    def select_pet(self, _index):
+        self.selected_id = self.selector.currentData() or "founder"
+        self.refresh()
+
+    def toggle_compact(self):
+        self.details.setVisible(not self.details.isVisible())
+        self.collapse.setText("▾" if self.details.isVisible() else "▸")
+        self.adjustSize()
+
+    def care_selected(self, action):
+        adopted = self.household_pet()
+        if adopted is None:
+            self.pet.care(action)
+            return
+        adopted.setdefault("hunger", 85)
+        adopted.setdefault("happiness", 85)
+        adopted.setdefault("cleanliness", 90)
+        adopted.setdefault("energy", 85)
+        adopted.setdefault("affection", 30)
+        if action == "sleep":
+            adopted["sleeping"] = not adopted.get("sleeping", False)
+        elif adopted.get("sleeping", False):
+            self.tip.setText("Wake this pet before feeding or playing.")
+            return
+        elif action == "feed":
+            adopted["hunger"] = clamp(adopted["hunger"]+27)
+            adopted["happiness"] = clamp(adopted["happiness"]+4)
+            adopted["cleanliness"] = clamp(adopted["cleanliness"]-5)
+        elif action == "play":
+            adopted["happiness"] = clamp(adopted["happiness"]+18)
+            adopted["energy"] = clamp(adopted["energy"]-12)
+            adopted["affection"] = clamp(adopted["affection"]+3)
+        elif action == "clean":
+            adopted["cleanliness"] = clamp(adopted["cleanliness"]+42)
+            adopted["happiness"] = clamp(adopted["happiness"]+5)
+        self.pet.persist()
+        self.tip.setText(f"{adopted.get('name','Buddy')} loved the attention! ♡")
+        self.refresh()
+
+    def rename_pet(self):
+        adopted = self.household_pet()
+        original = adopted.get("name","Buddy") if adopted is not None else self.pet.state.name
+        name, accepted = QInputDialog.getText(self,"Name your pet","Pet name:",text=original)
         if accepted and name.strip():
-            self.pet.state.name = name.strip()[:18]
+            if adopted is not None:
+                adopted["name"] = name.strip()[:18]
+            else:
+                self.pet.state.name = name.strip()[:18]
             self.pet.persist()
             self.refresh()
 
-    def refresh(self) -> None:
+    def refresh(self):
         state = self.pet.state
-        self.status.setText(f"{state.name} {'🌟' if state.founder else ''} •  {'Egg' if not state.egg_hatched else state.species}  •  {state.mood}")
+        choices = [("🌟 " + state.name,"founder")]
+        choices.extend((("🐾 " + p.get("name","Buddy")),p.get("id"))
+                       for p in (state.adopted_pets or []))
+        current = self.selected_id
+        if current not in [id_ for _,id_ in choices]:
+            current = "founder"
+            self.selected_id = current
+        self.selector.blockSignals(True)
+        self.selector.clear()
+        for label,id_ in choices:
+            self.selector.addItem(label,id_)
+        self.selector.setCurrentIndex([id_ for _,id_ in choices].index(current))
+        self.selector.blockSignals(False)
+        adopted = self.household_pet()
+        species = adopted.get("species","Ghost") if adopted is not None else state.species
+        emoji = {"Cat":"🐱","Dog":"🐶","Bunny":"🐰","Fox":"🦊",
+                 "Dragon":"🐲","Ghost":"👻"}.get(species,"🐾")
+        self.avatar.setText(emoji if adopted is not None else "🐭")
+        label = adopted.get("name","Buddy") if adopted is not None else state.name
+        mood = "Sleeping" if ((adopted.get("sleeping",False) if adopted is not None else state.sleeping)) else "Feeling loved"
+        self.status.setText(f"{label}  {'🌟 Founder' if adopted is None else species}\n{mood}")
+        for stat,(bar,amount) in self.stats.items():
+            value = (adopted.get(stat,85) if adopted is not None else getattr(state,stat))
+            value = round(clamp(float(value)))
+            bar.setValue(value)
+            amount.setText(f"{value}%")
         self.personality_label.setText(
-            f"♥ Affection {round(state.affection)}%  •  Personality: {state.personality}\n"
-            f"Age {state.age_days} days  •  {state.coins} coins  •  Cuddles {state.cuddles}")
-        for stat, bar in self.stats.items():
-            bar.setValue(round(getattr(state, stat)))
-        self.roaming_button.setText("⏸ Pause walking" if state.roaming else "▶ Resume walking")
-        self.display_sprite.frame = self.pet.frame
-        self.display_sprite.update()
-
+            f"♡ Affection {round(adopted.get('affection',30))}% · {adopted.get('trait','Curious')}"
+            if adopted is not None else
+            f"♡ Affection {round(state.affection)}% · {state.personality} · 🪙 {state.coins}")
+        self.roaming_button.setVisible(adopted is None)
+        self.roaming_button.setText("⏸ Pause walk" if state.roaming else "▶ Resume walk")
+        self.colors.setEnabled(adopted is None)
+        self.tip.setStyleSheet("color:#706c5b;font-size:11px;")
 
 class RoamingPet(QWidget):
     def __init__(self, state: PetState):
