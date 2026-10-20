@@ -1,8 +1,12 @@
-# GhostPet v0.4 Preview — Eggs, Species & Connected House
+# GhostPet v0.5 Preview — Founders & Adoption Nursery
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.5
+
+Your original saved companion is marked with a 🌟 Founder star and is never overwritten by adopting another pet. Open the care console and select **Adoption Nursery**, buy an egg for 30 coins, then warm it five times to hatch a Ghost, Cat, Dog, Bunny, Fox, or Dragon. Name the hatchling, then open the Little House to see it explore. Up to six pets can live together. Housemate desktop roaming, breeding, and detailed artwork are not yet included.
 
 ## Features
 
@@ -87,7 +91,7 @@ to support roaming. Test it under your Zorin session before enabling autostart.
 
 This is an early playable build, not yet a full Giga Pet remake. The house
 now includes an original code-drawn pixel environment with a walking pet,
-but furniture animations and interactions are still limited. Multiple pets,
-eggs, species breeding, accessories, sounds,
+but furniture animations and interactions are still limited. Independent multi-pet desktop roaming,
+species breeding, accessories, sounds,
 and fully animated furniture interactions are planned for future versions.
 No copyrighted Tamagotchi sprites are bundled.
