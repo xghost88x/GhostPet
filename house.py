@@ -84,6 +84,8 @@ class HouseCanvas(QWidget):
                 self.draw_furniture(p, pos[0] * TILE, pos[1] * TILE, entry.get("item"))
         if self.dialog.state.location == "house" and self.dialog.state.egg_hatched:
             self.draw_pet(p)
+        for housemate in self.dialog.state.adopted_pets or []:
+            self.draw_housemate(p, housemate)
         if self.dialog.mode == "Decorate":
             p.setPen(QPen(QColor("#bdb1e0"), 1, Qt.PenStyle.DotLine))
             for x in range(1, W - 1):
@@ -147,6 +149,39 @@ class HouseCanvas(QWidget):
         elif item == "lamp":
             p.fillRect(px + 14, py + 15, 4, 9, QColor("#c7c4df"))
             p.fillRect(px + 9, py + 9, 14, 9, QColor("#fff0b0"))
+
+    def draw_housemate(self, p, pet):
+        """Small, species-specific pixel silhouettes for nursery pets."""
+        x = max(1, min(W-2, int(pet.get("x", 12))))
+        y = max(1, min(H-2, int(pet.get("y", 8))))
+        px, py = x*TILE+4, y*TILE+4
+        species = pet.get("species","Ghost")
+        tint = QColor({"Ghost":"#dfd5ff","Cat":"#f0bd81","Dog":"#bb9a77",
+                       "Bunny":"#f4e9e0","Fox":"#ea945b","Dragon":"#81cc9b"}.get(species,"#dfd5ff"))
+        dark = QColor("#303047")
+        p.fillRect(px+4,py+7,18,16,dark)
+        p.fillRect(px+6,py+8,14,14,tint)
+        p.fillRect(px+4,py+13,18,8,tint)
+        if species == "Ghost":
+            p.fillRect(px+3,py+20,6,4,tint)
+            p.fillRect(px+17,py+20,6,4,tint)
+        elif species == "Bunny":
+            p.fillRect(px+6,py-4,5,14,tint)
+            p.fillRect(px+17,py-4,5,14,tint)
+        elif species in ("Cat","Fox"):
+            p.fillRect(px+5,py+3,6,7,tint)
+            p.fillRect(px+17,py+3,6,7,tint)
+            if species == "Fox":
+                p.fillRect(px+22,py+17,6,4,tint)
+        elif species == "Dog":
+            p.fillRect(px+3,py+8,4,8,dark)
+            p.fillRect(px+21,py+8,4,8,dark)
+        elif species == "Dragon":
+            p.fillRect(px+1,py+12,6,9,QColor("#548c72"))
+            p.fillRect(px+21,py+12,6,9,QColor("#548c72"))
+            p.fillRect(px+11,py+2,5,7,tint)
+        p.fillRect(px+9,py+12,3,4,dark)
+        p.fillRect(px+17,py+12,3,4,dark)
 
     def draw_pet(self, p):
         x, y = self.dialog.position
@@ -324,7 +359,20 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#8175aa}""")
             self.refresh()
 
     def tick(self):
-        if self.mode != "Explore" or self.state.location != "house":
+        if self.mode != "Explore":
+            return
+        # Housemates keep exploring even when the founder is outside.
+        occupied = self.blocked()
+        for pet in self.state.adopted_pets or []:
+            if random.random() < .18:
+                x, y = int(pet.get("x",12)), int(pet.get("y",8))
+                options = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
+                options = [(a,b) for a,b in options if 0<a<W-1 and 0<b<H-1
+                           and (a,b) not in WALLS and (a,b) not in occupied]
+                if options:
+                    pet["x"], pet["y"] = random.choice(options)
+        if self.state.location != "house":
+            self.canvas.update()
             return
         if self.path:
             self.position = self.path.pop(0)
