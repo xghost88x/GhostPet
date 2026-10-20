@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 
 from activities import GameDialog, pick_speech
 from house import HouseDialog
+from nursery import NurseryDialog
 
 
 APP_NAME = "GhostPet"
@@ -90,6 +91,9 @@ class PetState:
     portal_y: int = -1
     house_pet_x: int = 2
     house_pet_y: int = 3
+    founder: bool = False
+    adopted_pets: list | None = None
+    nursery_egg_taps: int = -1
 
     @classmethod
     def load(cls) -> "PetState":
@@ -100,6 +104,8 @@ class PetState:
             state = cls(**{key: value for key, value in values.items() if key in allowed})
             if "egg_hatched" not in values:
                 state.egg_hatched = True  # Existing companions stay hatched.
+            if "founder" not in values:
+                state.founder = True  # Migrated original pet: never replaced.
         except (OSError, ValueError, TypeError):
             state = cls()
         if state.born <= 0:
@@ -116,6 +122,8 @@ class PetState:
         for stat in ("hunger", "happiness", "cleanliness", "energy"):
             setattr(state, stat, clamp(float(getattr(state, stat))))
         state.affection = clamp(float(state.affection))
+        state.adopted_pets = state.adopted_pets if isinstance(state.adopted_pets, list) else []
+        state.nursery_egg_taps = int(state.nursery_egg_taps) if isinstance(state.nursery_egg_taps, int) else -1
         state.furniture = state.furniture if isinstance(state.furniture, list) else []
         state.owned_furniture = (state.owned_furniture if isinstance(state.owned_furniture, list)
                                  else ["bed"])
@@ -362,7 +370,7 @@ class CareConsole(QDialog):
         header = QLabel("✦  GHOSTPET  //  POCKET CARE")
         header.setObjectName("heading")
         outer.addWidget(header)
-        subtitle = QLabel("CLASSIC VIRTUAL COMPANION  •  V0.2")
+        subtitle = QLabel("CLASSIC VIRTUAL COMPANION  •  V0.5 PREVIEW")
         subtitle.setObjectName("subheading")
         outer.addWidget(subtitle)
 
@@ -411,6 +419,9 @@ class CareConsole(QDialog):
             button.clicked.connect(callback)
             activity_row.addWidget(button)
         outer.addLayout(activity_row)
+        nursery_button = QPushButton("🥚 ADOPTION NURSERY")
+        nursery_button.clicked.connect(self.pet.open_nursery)
+        outer.addWidget(nursery_button)
         self.personality_label = QLabel()
         self.personality_label.setWordWrap(True)
         outer.addWidget(self.personality_label)
@@ -451,7 +462,7 @@ class CareConsole(QDialog):
 
     def refresh(self) -> None:
         state = self.pet.state
-        self.status.setText(f"{state.name}  •  {'Egg' if not state.egg_hatched else state.species}  •  {state.mood}")
+        self.status.setText(f"{state.name} {'🌟' if state.founder else ''} •  {'Egg' if not state.egg_hatched else state.species}  •  {state.mood}")
         self.personality_label.setText(
             f"♥ Affection {round(state.affection)}%  •  Personality: {state.personality}\n"
             f"Age {state.age_days} days  •  {state.coins} coins  •  Cuddles {state.cuddles}")
@@ -478,6 +489,7 @@ class RoamingPet(QWidget):
         self.cuddle_taps = 0
         self.cuddle_mode = False
         self.house_dialog = None
+        self.nursery_dialog = None
         self.going_home = False
         self.home_steps = 0
         self.bubble_text = ""
@@ -629,6 +641,13 @@ class RoamingPet(QWidget):
         else:
             self.say(random.choice(["♥", "Eee! ♡", "More!", "hehe ♡"]))
         self.update()
+
+    def open_nursery(self) -> None:
+        if self.nursery_dialog and self.nursery_dialog.isVisible():
+            self.nursery_dialog.raise_()
+            return
+        self.nursery_dialog = NurseryDialog(self.state, self.persist, self)
+        self.nursery_dialog.show()
 
     def open_house(self) -> None:
         if self.house_dialog and self.house_dialog.isVisible():
