@@ -1,4 +1,4 @@
-# GhostPet v0.3 — Little Haunted House for Zorin OS
+# GhostPet v0.4 Preview — Eggs, Species & Connected House
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
@@ -18,6 +18,16 @@ It works entirely offline and saves its progress locally.
   click-to-walk pathfinding, autonomous roaming and a separate Decorate mode.
 - Start with 200 coins; existing saves receive a one-time housewarming top-up
   to at least 200 coins when first opening the v0.3 house.
+- New players begin with a pixel egg: click it five times to hatch, then choose
+  Ghost, Cat, Dog, Bunny, Fox, or Dragon. Existing saves remain hatched.
+- Movable house entrance on the desktop. Right-click the pet and choose **Walk
+  home**, or open its house and choose **Walk inside**. The pet physically walks
+  toward the entrance, disappears from the desktop, then appears inside.
+- From the house, choose **Visit desktop** to let the pet walk outside again.
+- One live location per pet: it is not simultaneously rendered inside and out.
+- Indoor position is remembered when you close the house window. Basic rest and
+  happiness continue while your pet is indoors, even with the window closed;
+  detailed room-by-room routines are still a future feature.
 - Saves affection, personality, coins, furniture and game progress alongside v0.1 state.
 - Needs slowly change in real time, including while the app is closed.
 - Hatchling → Youngling → Companion stages.
@@ -45,6 +55,8 @@ from PyPI, which needs internet access. Later launches reuse it.
 - **Click** the pet: care console.
 - **Drag** the pet: move to another location.
 - **Right-click** the pet: care, pause, quit.
+- **Drag** the small house entrance to reposition it on the desktop; click to
+  open the interior. The entrance remains when your pet is indoors.
 - **Close** the console: pet keeps walking.
 - **Quit** from the pet's menu to exit completely.
 
