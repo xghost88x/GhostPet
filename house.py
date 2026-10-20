@@ -82,7 +82,8 @@ class HouseCanvas(QWidget):
             pos = self.dialog.entry_tile(entry)
             if pos and pos not in WALLS:
                 self.draw_furniture(p, pos[0] * TILE, pos[1] * TILE, entry.get("item"))
-        self.draw_pet(p)
+        if self.dialog.state.location == "house" and self.dialog.state.egg_hatched:
+            self.draw_pet(p)
         if self.dialog.mode == "Decorate":
             p.setPen(QPen(QColor("#bdb1e0"), 1, Qt.PenStyle.DotLine))
             for x in range(1, W - 1):
@@ -150,11 +151,23 @@ class HouseCanvas(QWidget):
     def draw_pet(self, p):
         x, y = self.dialog.position
         px, py = x*TILE + 3, y*TILE + 2
+        species = self.dialog.state.species
+        tint = QColor({"Ghost":"#e2ccff", "Cat":"#f3d6a5", "Dog":"#c8a781",
+                       "Bunny":"#f4e8de", "Fox":"#f2a773", "Dragon":"#91dcab"}.get(species,"#e2ccff"))
         p.fillRect(px + 4, py + 3, 18, 20, QColor("#262a49"))
-        p.fillRect(px + 6, py + 2, 14, 19, QColor("#e2ccff"))
-        p.fillRect(px + 4, py + 9, 18, 11, QColor("#e2ccff"))
-        p.fillRect(px + 4, py + 20, 6, 4, QColor("#e2ccff"))
-        p.fillRect(px + 16, py + 20, 6, 4, QColor("#e2ccff"))
+        p.fillRect(px + 6, py + 2, 14, 19, tint)
+        p.fillRect(px + 4, py + 9, 18, 11, tint)
+        p.fillRect(px + 4, py + 20, 6, 4, tint)
+        p.fillRect(px + 16, py + 20, 6, 4, tint)
+        if species == "Bunny":
+            p.fillRect(px + 6, py - 5, 5, 10, tint)
+            p.fillRect(px + 18, py - 5, 5, 10, tint)
+        elif species in ("Cat", "Fox"):
+            p.fillRect(px + 5, py, 5, 6, tint)
+            p.fillRect(px + 18, py, 5, 6, tint)
+        elif species == "Dragon":
+            p.fillRect(px, py + 11, 7, 10, QColor("#5dae83"))
+            p.fillRect(px + 22, py + 11, 7, 10, QColor("#5dae83"))
         p.fillRect(px + 9, py + 10, 3, 5, QColor("#28334d"))
         p.fillRect(px + 17, py + 10, 3, 5, QColor("#28334d"))
         p.fillRect(px + 6, py + 15, 3, 2, QColor("#f9a4c5"))
@@ -166,12 +179,16 @@ class HouseCanvas(QWidget):
 
 
 class HouseDialog(QDialog):
-    def __init__(self, state, save, parent=None):
+    def __init__(self, state, save, return_home, send_home, parent=None):
         super().__init__(parent)
         self.state = state
         self.save = save
+        self.return_home = return_home
+        self.send_home = send_home
         self.mode = "Explore"
-        self.position = (2, 3)
+        self.position = (state.house_pet_x, state.house_pet_y)
+        if self.position in WALLS or not (0 <= self.position[0] < W and 0 <= self.position[1] < H):
+            self.position = (2, 3)
         self.path = []
         self.activity = ""
         self.idle_ticks = 0
@@ -196,6 +213,9 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#8175aa}""")
         bar.addWidget(self.selector)
         self.balance = QLabel()
         bar.addWidget(self.balance)
+        self.door_button = QPushButton()
+        self.door_button.clicked.connect(self.travel)
+        bar.addWidget(self.door_button)
         body.addLayout(bar)
         self.canvas = HouseCanvas(self)
         body.addWidget(self.canvas)
@@ -204,6 +224,13 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#8175aa}""")
         self.tick_timer = QTimer(self)
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(260)
+        self.refresh()
+
+    def travel(self):
+        if self.state.location == "house":
+            self.return_home()
+        else:
+            self.send_home()
         self.refresh()
 
     def entry_tile(self, entry):
@@ -236,6 +263,7 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#8175aa}""")
 
     def refresh(self):
         self.balance.setText(f"🪙 {self.state.coins}")
+        self.door_button.setText("↗ Visit desktop" if self.state.location == "house" else "⌂ Walk inside")
         self.canvas.update()
 
     def toggle_mode(self):
@@ -296,10 +324,11 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#8175aa}""")
             self.refresh()
 
     def tick(self):
-        if self.mode != "Explore":
+        if self.mode != "Explore" or self.state.location != "house":
             return
         if self.path:
             self.position = self.path.pop(0)
+            self.state.house_pet_x, self.state.house_pet_y = self.position
             self.activity = "walking"
         elif self.idle_ticks > 0:
             self.idle_ticks -= 1
@@ -313,4 +342,15 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#8175aa}""")
             self.activity = "exploring"
         else:
             self.activity = ""
+        if random.random() < .007:
+            if self.position[1] > 6:
+                self.state.happiness = min(100, self.state.happiness + .4)
+            else:
+                self.state.energy = min(100, self.state.energy + .25)
+            self.save()
         self.canvas.update()
+
+    def closeEvent(self, event):
+        self.state.house_pet_x, self.state.house_pet_y = self.position
+        self.save()
+        super().closeEvent(event)
