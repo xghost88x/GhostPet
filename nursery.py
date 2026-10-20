@@ -91,6 +91,12 @@ class NurseryDialog(QDialog):
             "x": random.randint(9,15),
             "y": random.randint(7,10),
             "trait": random.choice(["Playful", "Curious", "Cuddly", "Mischievous"]),
+            "hunger": 88,
+            "happiness": 82,
+            "cleanliness": 95,
+            "energy": 87,
+            "affection": 30,
+            "sleeping": False,
         })
         self.state.nursery_egg_taps = -1
         self.save()
