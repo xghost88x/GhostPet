@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.1-preview — Founder Mouse & Woodland Cottage
+
+- Original Founder pets now use an independent small rounded mouse silhouette with no shared-species side arms.
+- Redesigned default home as a non-spooky woodland cottage with continuous wood plank floors, cozy rugs, curtains, and warm trim.
+- Preserved existing pet states, furniture placements, navigation tiles, and nursery.
+- Halloween is reserved as an optional future theme, not the default.
+
+
 ## v0.5.0-preview — Founders & Adoption Nursery
 
 - Existing companions receive a persistent Founder star during save migration.
