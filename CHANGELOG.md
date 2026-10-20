@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.0-preview — Eggs, Species and Connected House
+
+- New games start with a hatchable egg; existing companions are unaffected.
+- Choice of six starting species with distinct early sprite markings.
+- Movable desktop house entrance and physically animated walk-home transition.
+- One shared location for desktop and house views, with return-home controls.
+- Early background house routines affect energy and happiness.
+
 ## v0.3.0 — Little Haunted House (preview)
 
 - Added a code-drawn 18×12 top-down pixel house with four rooms and doorways.
