@@ -47,6 +47,7 @@ PALETTES = {
     "Lilac": ("#d8b8ff", "#a986df", "#ff9fc4"),
     "Ember": ("#ffca8c", "#ef8c76", "#ff92a8"),
 }
+SPECIES = ("Ghost", "Cat", "Dog", "Bunny", "Fox", "Dragon")
 
 
 def clamp(value: float, minimum: float = 0, maximum: float = 100) -> float:
@@ -81,6 +82,14 @@ class PetState:
     owned_furniture: list | None = None
     house_version: int = 1
     housewarming_granted: bool = False
+    species: str = "Ghost"
+    egg_hatched: bool = False
+    hatch_taps: int = 0
+    location: str = "desktop"
+    portal_x: int = -1
+    portal_y: int = -1
+    house_pet_x: int = 2
+    house_pet_y: int = 3
 
     @classmethod
     def load(cls) -> "PetState":
@@ -89,6 +98,8 @@ class PetState:
         try:
             values = json.loads(STATE_FILE.read_text(encoding="utf-8"))
             state = cls(**{key: value for key, value in values.items() if key in allowed})
+            if "egg_hatched" not in values:
+                state.egg_hatched = True  # Existing companions stay hatched.
         except (OSError, ValueError, TypeError):
             state = cls()
         if state.born <= 0:
@@ -97,6 +108,10 @@ class PetState:
             state.last_updated = now
         if state.color not in PALETTES:
             state.color = "Mint"
+        if state.species not in SPECIES:
+            state.species = "Ghost"
+        if state.location not in ("desktop", "house"):
+            state.location = "desktop"
         state.name = str(state.name)[:18] or "Byte"
         for stat in ("hunger", "happiness", "cleanliness", "energy"):
             setattr(state, stat, clamp(float(getattr(state, stat))))
@@ -178,6 +193,15 @@ def draw_pet(painter: QPainter, width: int, height: int, state: PetState,
         painter.fillRect(base_x + x * scale, base_y + y * scale,
                          w * scale, h * scale, color)
 
+    if not state.egg_hatched:
+        pix(5, 7, 10, 11, outline)
+        pix(6, 5, 8, 12, cream)
+        pix(5, 10, 10, 6, QColor(PALETTES[state.color][0]))
+        pix(9, 8, 2, 3, pink)
+        pix(7, 13, 2, 2, pink)
+        painter.restore()
+        return
+
     # Tail, ears and their darker outlines.
     pix(17, 10, 2, 2, outline)
     pix(18, 8, 2, 3, main)
@@ -221,6 +245,26 @@ def draw_pet(painter: QPainter, width: int, height: int, state: PetState,
     else:
         pix(9, 14, 3, 1, eye)
         pix(10, 15, 1, 1, eye)
+    if state.species == "Bunny":
+        pix(3, 0, 3, 8, outline)
+        pix(14, 0, 3, 8, outline)
+        pix(4, 1, 1, 5, pink)
+        pix(15, 1, 1, 5, pink)
+    elif state.species == "Dog":
+        pix(0, 6, 5, 5, shaded)
+        pix(16, 6, 4, 5, shaded)
+        pix(9, 12, 3, 2, outline)
+    elif state.species == "Fox":
+        pix(0, 13, 4, 3, shaded)
+        pix(16, 13, 4, 3, shaded)
+        pix(7, 14, 6, 2, cream)
+    elif state.species == "Dragon":
+        pix(0, 8, 4, 7, shaded)
+        pix(16, 8, 4, 7, shaded)
+        pix(9, 1, 2, 4, cream)
+    elif state.species == "Ghost":
+        pix(2, 16, 3, 3, main)
+        pix(15, 16, 3, 3, main)
     painter.restore()
 
 
@@ -236,6 +280,55 @@ class PetSprite(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         draw_pet(painter, self.width(), self.height(), self.state, self.frame,
                  scale=4 if self.width() <= 120 else 5)
+
+
+class HomePortal(QWidget):
+    """Movable little door shared by desktop and house simulation."""
+    def __init__(self, pet):
+        super().__init__()
+        self.pet = pet
+        self.drag_offset = None
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool |
+                            Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(80, 95)
+        screen = QApplication.primaryScreen().availableGeometry()
+        x = pet.state.portal_x if pet.state.portal_x >= 0 else screen.right() - 110
+        y = pet.state.portal_y if pet.state.portal_y >= 0 else screen.bottom() - 105
+        self.move(x, y)
+        self.setToolTip("Click to visit the house • Drag to move")
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.fillRect(9, 37, 63, 54, QColor("#35314e"))
+        p.fillRect(16, 43, 50, 41, QColor("#c9b1e8"))
+        p.fillRect(3, 32, 75, 12, QColor("#74588f"))
+        p.fillRect(15, 19, 55, 14, QColor("#8f6dad"))
+        p.fillRect(27, 58, 25, 32, QColor("#49405e"))
+        p.fillRect(33, 63, 12, 21, QColor("#ab90d0"))
+        p.fillRect(58, 54, 7, 9, QColor("#f5e6ab"))
+        p.setPen(QColor("#fff3fc"))
+        p.setFont(QFont("Sans", 9, QFont.Weight.Bold))
+        p.drawText(15, 14, "HOME")
+        p.end()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.drag_offset = event.globalPosition().toPoint() - self.pos()
+            self.was_dragged = False
+
+    def mouseMoveEvent(self, event):
+        if self.drag_offset is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            self.was_dragged = True
+            self.move(event.globalPosition().toPoint() - self.drag_offset)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self.drag_offset is not None:
+            self.drag_offset = None
+            self.pet.state.portal_x, self.pet.state.portal_y = self.x(), self.y()
+            self.pet.persist()
+            if not self.was_dragged:
+                self.pet.open_house()
 
 
 class CareConsole(QDialog):
@@ -359,7 +452,7 @@ class CareConsole(QDialog):
 
     def refresh(self) -> None:
         state = self.pet.state
-        self.status.setText(f"{state.name}  •  {state.stage}  •  {state.mood}")
+        self.status.setText(f"{state.name}  •  {'Egg' if not state.egg_hatched else state.species}  •  {state.mood}")
         self.personality_label.setText(
             f"♥ Affection {round(state.affection)}%  •  Personality: {state.personality}\n"
             f"Age {state.age_days} days  •  {state.coins} coins  •  Cuddles {state.cuddles}")
@@ -386,6 +479,7 @@ class RoamingPet(QWidget):
         self.cuddle_taps = 0
         self.cuddle_mode = False
         self.house_dialog = None
+        self.going_home = False
         self.bubble_text = ""
         self.bubble_until = 0.0
         self.setWindowTitle("GhostPet")
@@ -400,6 +494,10 @@ class RoamingPet(QWidget):
         start_x = state.x if 0 <= state.x <= screen.right() else screen.center().x()
         start_y = state.y if 0 <= state.y <= screen.bottom() else screen.bottom() - self.height()
         self.move(start_x, start_y)
+        self.portal = HomePortal(self)
+        self.portal.show()
+        if state.location == "house":
+            self.hide()
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.animate)
@@ -467,7 +565,7 @@ class RoamingPet(QWidget):
         self.update()
 
     def maybe_speak(self) -> None:
-        if not self.state.sleeping and random.random() < .65:
+        if self.state.egg_hatched and self.state.location == "desktop" and not self.state.sleeping and random.random() < .65:
             self.say(pick_speech(self.state))
 
     def activity_reward(self, kind: str, score: int) -> None:
@@ -496,14 +594,14 @@ class RoamingPet(QWidget):
             self.console.refresh()
 
     def open_games(self) -> None:
-        if self.state.sleeping:
+        if self.state.sleeping or not self.state.egg_hatched:
             self.say("Zzz...")
             return
         self.game_dialog = GameDialog(self.activity_reward, self)
         self.game_dialog.show()
 
     def open_cuddles(self) -> None:
-        if self.state.sleeping:
+        if self.state.sleeping or not self.state.egg_hatched:
             self.say("Zzz...")
             return
         if self.cuddle_mode:
@@ -533,11 +631,62 @@ class RoamingPet(QWidget):
         self.update()
 
     def open_house(self) -> None:
-        self.house_dialog = HouseDialog(self.state, self.persist, self)
+        if self.house_dialog and self.house_dialog.isVisible():
+            self.house_dialog.raise_()
+            return
+        self.house_dialog = HouseDialog(self.state, self.persist,
+                                        self.return_from_house, self.send_home, self)
         self.house_dialog.show()
+
+    def return_from_house(self) -> None:
+        self.state.location = "desktop"
+        self.going_home = False
+        self.move(self.portal.x() - 55, self.portal.y())
+        self.show()
+        self.say("I'm baaaack! ♡")
+        self.persist()
+
+    def send_home(self) -> None:
+        if self.state.egg_hatched and self.state.location == "desktop":
+            self.going_home = True
+            self.state.roaming = True
+            self.say("Going home! ♡")
+
+    def tap_egg(self) -> None:
+        self.state.hatch_taps += 1
+        if self.state.hatch_taps >= 5:
+            species, accepted = QInputDialog.getItem(self, "Your egg is hatching!",
+                         "Choose your starter species:", list(SPECIES), 0, False)
+            if accepted and species:
+                self.state.species = species
+                self.state.egg_hatched = True
+                self.state.born = time.time()
+                self.say(f"{species} hatched! ♡")
+                self.persist()
+            else:
+                self.say("Ready to hatch!")
+        else:
+            self.say(f"Crack! {self.state.hatch_taps}/5")
+        self.update()
 
     def animate(self) -> None:
         self.frame += 1
+        if self.going_home and self.state.location == "desktop":
+            target_x = self.portal.x() + 12
+            target_y = self.portal.y() + 18
+            dx, dy = target_x - self.x(), target_y - self.y()
+            if abs(dx) <= 3 and abs(dy) <= 3:
+                self.going_home = False
+                self.state.location = "house"
+                self.hide()
+                self.persist()
+                if self.house_dialog and self.house_dialog.isVisible():
+                    self.house_dialog.refresh()
+            else:
+                self.facing = 1 if dx >= 0 else -1
+                self.move(self.x() + max(-3, min(3, dx)), self.y() + max(-3, min(3, dy)))
+            self.update()
+            return
         if self.state.roaming and not self.state.sleeping and not self.dragging:
             if self.idle_ticks > 0:
                 self.idle_ticks -= 1
@@ -551,10 +700,15 @@ class RoamingPet(QWidget):
                     self.move(next_x, self.y())
                     if random.random() < 0.004:
                         self.idle_ticks = random.randint(18, 70)
+                    if self.state.egg_hatched and random.random() < .00018:
+                        self.send_home()
         self.update()
 
     def update_needs(self) -> None:
         self.state.advance()
+        if self.state.location == "house" and self.state.egg_hatched:
+            self.state.energy = clamp(self.state.energy + .25)
+            self.state.happiness = clamp(self.state.happiness + .1)
         self.persist()
         if self.console and self.console.isVisible():
             self.console.refresh()
@@ -623,6 +777,7 @@ class RoamingPet(QWidget):
         elif event.button() == Qt.MouseButton.RightButton:
             menu = QMenu(self)
             menu.addAction("♥ Care for pet", self.open_console)
+            menu.addAction("⌂ Walk home", self.send_home)
             if self.cuddle_mode:
                 menu.addAction("Cancel cuddle mode", self.open_cuddles)
             menu.addAction("Pause / resume walking", self.toggle_roaming)
@@ -643,7 +798,9 @@ class RoamingPet(QWidget):
                 self.dragging = False
                 self.persist()
             else:
-                if self.cuddle_mode:
+                if not self.state.egg_hatched:
+                    self.tap_egg()
+                elif self.cuddle_mode:
                     self.pat_directly()
                 else:
                     self.open_console()
@@ -660,7 +817,8 @@ def main() -> None:
     app.setQuitOnLastWindowClosed(False)
     state = PetState.load()
     pet = RoamingPet(state)
-    pet.show()
+    if state.location == "desktop":
+        pet.show()
     app.aboutToQuit.connect(pet.persist)
     sys.exit(app.exec())
 
