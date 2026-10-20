@@ -1,8 +1,12 @@
-# GhostPet v0.5.1 Preview — Founder Mouse & Woodland Cottage
+# GhostPet v0.5.2 Preview — Compact Household Care
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.5.2
+
+The compact 326-pixel **Pocket Care** panel lets you choose any adopted housemate from a dropdown, care for them individually, and collapse the details. Your existing save and Founder companion remain intact. Adopted pets receive independent basic stats and simple play interactions; Founder-only minigames and desktop roaming remain separate. Existing adopted pets get sensible default stats until first interaction.
 
 ## What's new in v0.5.1
 
