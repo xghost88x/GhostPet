@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5.2-preview — Compact Household Care
+
+- Compact woodland-colored pocket-care console (326 pixels wide) with collapse control.
+- Pet dropdown includes adopted pets from existing saved households.
+- Feed, play, clean, sleep, and rename the selected adopted pet independently.
+- Newly adopted pets now initialize separate care statistics; older adopted pets read safe defaults.
+- Founder retains existing minigames, roaming and shell-color controls.
+
+
 ## v0.5.1-preview — Founder Mouse & Woodland Cottage
 
 - Original Founder pets now use an independent small rounded mouse silhouette with no shared-species side arms.
