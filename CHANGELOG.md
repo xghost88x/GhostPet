@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.1-preview — Doorway Fix
+
+- Fixed pets getting stuck in front of the desktop house near screen edges.
+- Door entry now uses a reachable position and accepts doorway overlap.
+
 ## v0.4.0-preview — Eggs, Species and Connected House
 
 - New games start with a hatchable egg; existing companions are unaffected.
