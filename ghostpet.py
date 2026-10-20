@@ -480,6 +480,7 @@ class RoamingPet(QWidget):
         self.cuddle_mode = False
         self.house_dialog = None
         self.going_home = False
+        self.home_steps = 0
         self.bubble_text = ""
         self.bubble_until = 0.0
         self.setWindowTitle("GhostPet")
@@ -649,6 +650,7 @@ class RoamingPet(QWidget):
     def send_home(self) -> None:
         if self.state.egg_hatched and self.state.location == "desktop":
             self.going_home = True
+            self.home_steps = 0
             self.state.roaming = True
             self.say("Going home! ♡")
 
@@ -672,11 +674,23 @@ class RoamingPet(QWidget):
     def animate(self) -> None:
         self.frame += 1
         if self.going_home and self.state.location == "desktop":
-            target_x = self.portal.x() + 12
-            target_y = self.portal.y() + 18
+            # The target must be reachable by the WHOLE pet window. Near the
+            # taskbar/screen edge the window manager can clamp moves, so aiming
+            # at the portal's top-left would leave the pet stuck outside.
+            geom = QApplication.primaryScreen().availableGeometry()
+            target_x = max(geom.left(), min(
+                self.portal.x() + (self.portal.width() - self.width()) // 2,
+                geom.right() - self.width() + 1))
+            target_y = max(geom.top(), min(
+                self.portal.y() + (self.portal.height() - self.height()) // 2,
+                geom.bottom() - self.height() + 1))
             dx, dy = target_x - self.x(), target_y - self.y()
-            if abs(dx) <= 3 and abs(dy) <= 3:
+            self.home_steps += 1
+            touching_door = self.geometry().intersects(self.portal.geometry())
+            if (abs(dx) <= 5 and abs(dy) <= 5) or (touching_door and
+                    abs(dx) <= 16 and abs(dy) <= 16) or self.home_steps > 500:
                 self.going_home = False
+                self.home_steps = 0
                 self.state.location = "house"
                 self.hide()
                 self.persist()
