@@ -210,6 +210,48 @@ def draw_pet(painter: QPainter, width: int, height: int, state: PetState,
         painter.restore()
         return
 
+    if state.founder:
+        # Exclusive founder mouse: compact ears, pear-shaped body, short paws.
+        # Avoid the broad shared-species shoulders and side appendages entirely.
+        pix(16, 13, 2, 2, outline)
+        pix(18, 12, 2, 2, shaded)
+        pix(18, 10, 1, 2, main)  # Thin curved tail.
+        # Small rounded ears anchored above the head.
+        pix(4, 3, 5, 5, outline)
+        pix(11, 3, 5, 5, outline)
+        pix(5, 4, 3, 3, main)
+        pix(12, 4, 3, 3, main)
+        pix(6, 5, 2, 2, pink)
+        pix(12, 5, 2, 2, pink)
+        # Soft rounded head instead of rectangular shoulder blocks.
+        pix(5, 7, 10, 8, outline)
+        pix(4, 9, 12, 5, outline)
+        pix(6, 8, 8, 7, main)
+        pix(5, 10, 10, 4, main)
+        # Tapered lower body.
+        pix(6, 14, 8, 4, outline)
+        pix(7, 14, 6, 4, main)
+        pix(8, 15, 4, 2, cream)
+        # Tiny paws below the body (no visible arms).
+        pix(6, 17, 3, 2, outline)
+        pix(11, 17, 3, 2, outline)
+        pix(7, 17, 2, 1, shaded)
+        pix(11, 17, 2, 1, shaded)
+        if state.sleeping or frame % 45 == 0:
+            pix(7, 11, 2, 1, eye)
+            pix(12, 11, 2, 1, eye)
+        else:
+            pix(7, 10, 2, 2, eye)
+            pix(12, 10, 2, 2, eye)
+            pix(7, 10, 1, 1, cream)
+            pix(12, 10, 1, 1, cream)
+        pix(6, 12, 2, 1, pink)
+        pix(13, 12, 2, 1, pink)
+        pix(10, 12, 1, 1, eye)
+        pix(9, 14, 3, 1, eye)
+        painter.restore()
+        return
+
     # Tail, ears and their darker outlines.
     pix(17, 10, 2, 2, outline)
     pix(18, 8, 2, 3, main)
