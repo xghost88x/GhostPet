@@ -11,4 +11,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Check source syntax
-        run: python -m compileall -q ghostpet.py activities.py house.py
+        run: python -m compileall -q ghostpet.py activities.py house.py nursery.py
