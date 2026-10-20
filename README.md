@@ -1,8 +1,13 @@
-# GhostPet v0.5 Preview — Founders & Adoption Nursery
+# GhostPet v0.5.1 Preview — Founder Mouse & Woodland Cottage
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.5.1
+
+- Founder companions now have their own compact mouse-style pixel sprite (no oversized side appendages).
+- The Little House uses a warm, normal **Woodland Cottage** aesthetic with continuous pine floors, rugs, windows and trim instead of checkerboard floor tiles. Navigation and furniture saves are unchanged. Halloween remains a future optional seasonal theme.
 
 ## What's new in v0.5
 
