@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5.0-preview — Founders & Adoption Nursery
+
+- Existing companions receive a persistent Founder star during save migration.
+- Added adoption nursery, egg warming and six starter species (30 coins per egg).
+- Up to six pets share the household; existing pet statistics and furniture remain.
+- New housemates wander inside the pixel house with distinct starter silhouettes.
+- Multi-pet desktop roaming and breeding remain future work.
+
+
 ## v0.4.2-preview — Original Sprite Silhouette
 
 - Restored the original Ghost desktop sprite outline.
