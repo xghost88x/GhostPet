@@ -251,20 +251,19 @@ def draw_pet(painter: QPainter, width: int, height: int, state: PetState,
         pix(4, 1, 1, 5, pink)
         pix(15, 1, 1, 5, pink)
     elif state.species == "Dog":
-        pix(0, 6, 5, 5, shaded)
-        pix(16, 6, 4, 5, shaded)
+        # Small floppy ears, not side limbs.
+        pix(2, 5, 2, 4, shaded)
+        pix(16, 5, 2, 4, shaded)
         pix(9, 12, 3, 2, outline)
     elif state.species == "Fox":
-        pix(0, 13, 4, 3, shaded)
-        pix(16, 13, 4, 3, shaded)
+        pix(17, 13, 2, 3, shaded)
         pix(7, 14, 6, 2, cream)
     elif state.species == "Dragon":
-        pix(0, 8, 4, 7, shaded)
-        pix(16, 8, 4, 7, shaded)
+        # Tiny folded wings contained within the sprite outline.
+        pix(3, 9, 2, 4, shaded)
+        pix(15, 9, 2, 4, shaded)
         pix(9, 1, 2, 4, cream)
-    elif state.species == "Ghost":
-        pix(2, 16, 3, 3, main)
-        pix(15, 16, 3, 3, main)
+    # Ghost intentionally uses the unchanged original v0.1 silhouette.
     painter.restore()
 
 
