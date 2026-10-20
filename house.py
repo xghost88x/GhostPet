@@ -95,28 +95,50 @@ class HouseCanvas(QWidget):
         p.end()
 
     def draw_floor(self, p):
-        colors = (("#70587a", "#786282"), ("#76688c", "#7f7194"),
-                  ("#8c716d", "#957976"), ("#597b7d", "#628587"))
-        for y in range(H):
-            for x in range(W):
-                room = (2 if y > 6 else 0) + (1 if x > 8 else 0)
-                base = colors[room][(x + y) % 2]
-                p.fillRect(x * TILE, y * TILE, TILE, TILE, QColor(base))
-                if (x, y) in WALLS:
-                    p.fillRect(x * TILE, y * TILE, TILE, TILE, QColor("#292b46"))
-                    p.fillRect(x * TILE + 2, y * TILE + 2, TILE - 4, 7, QColor("#777397"))
-                    p.fillRect(x * TILE + 2, y * TILE + 11, TILE - 4, 17, QColor("#4c496c"))
-                elif (x + 3*y) % 7 == 0:
-                    p.fillRect(x*TILE + 6, y*TILE + 7, 3, 3, QColor("#ffffff22"))
-        p.setFont(QFont("monospace", 9, QFont.Weight.Bold))
-        p.setPen(QColor("#f5e1ff"))
-        for title, x, y in (("BEDROOM", 2, 1), ("LIVING", 11, 1),
-                            ("KITCHEN", 2, 7), ("PLAYROOM", 11, 7)):
-            p.drawText(x*TILE, y*TILE+13, title)
-        # Four windows with cyan glass, positioned on outer walls.
-        for x, y in ((3, 0), (13, 0), (0, 8), (17, 8)):
-            p.fillRect(x*TILE + 6, y*TILE + 7, 20, 17, QColor("#8bd4dc"))
-            p.fillRect(x*TILE + 15, y*TILE + 7, 3, 17, QColor("#edf9ee"))
+        """Warm woodland interior; grid exists for navigation, not floor appearance."""
+        # Continuous plank floors with subtle grain, not checkerboard cells.
+        p.fillRect(0, 0, W*TILE, H*TILE, QColor("#be986f"))
+        room_colors = (
+            (1, 1, 7, 5, "#d2ac82"),   # bedroom: honey pine
+            (9, 1, 8, 5, "#cda883"),   # living: oak
+            (1, 7, 7, 4, "#ccad88"),   # kitchen: cream oak
+            (9, 7, 8, 4, "#d5b591"),  # playroom/nursery: birch
+        )
+        for x, y, w, h, shade in room_colors:
+            p.fillRect(x*TILE, y*TILE, w*TILE, h*TILE, QColor(shade))
+            for yy in range(y*TILE, (y+h)*TILE, 24):
+                p.fillRect(x*TILE, yy, w*TILE, 2, QColor("#ad8564"))
+                for xx in range(x*TILE + ((yy//24)%2)*38, (x+w)*TILE, 85):
+                    p.fillRect(xx, yy+2, 2, 22, QColor("#b7906d"))
+        # Non-interactive, decorative furnishings soften the schematic plan.
+        p.fillRect(10*TILE, 2*TILE, 5*TILE, 3*TILE, QColor("#9caf8b"))
+        p.fillRect(10*TILE+7, 2*TILE+7, 5*TILE-14, 3*TILE-14, QColor("#d9d7ad"))
+        p.fillRect(11*TILE, 8*TILE, 4*TILE, 2*TILE, QColor("#e5cab0"))
+        p.fillRect(11*TILE+8, 8*TILE+8, 4*TILE-16, 2*TILE-16, QColor("#f5e8d3"))
+        p.fillRect(2*TILE, 8*TILE, 2*TILE, TILE, QColor("#9ab9ac"))
+        # Baseboards and shadowed partitions with clear gaps for doorways.
+        for x, y in WALLS:
+            px, py = x*TILE, y*TILE
+            p.fillRect(px, py, TILE, TILE, QColor("#7f755b"))
+            p.fillRect(px, py, TILE, 7, QColor("#e7d6b2"))
+            p.fillRect(px, py+7, TILE, 4, QColor("#a38c6c"))
+            p.fillRect(px, py+11, TILE, TILE-11, QColor("#bca783"))
+        # Simple windows and curtains.
+        for x, y in ((3,0),(13,0),(0,8),(17,8)):
+            px, py = x*TILE, y*TILE
+            p.fillRect(px+5,py+5,22,21,QColor("#eff0c9"))
+            p.fillRect(px+8,py+7,16,17,QColor("#96c2c1"))
+            p.fillRect(px+15,py+7,2,17,QColor("#fff1d5"))
+            p.fillRect(px+6,py+5,4,21,QColor("#d1e2b4"))
+            p.fillRect(px+23,py+5,3,21,QColor("#d1e2b4"))
+        # Doorway thresholds: look intentional, but remain walkable.
+        for x,y in ((8,3),(8,4),(8,8),(3,6),(4,6),(12,6),(13,6)):
+            p.fillRect(x*TILE, y*TILE+TILE-5, TILE, 5, QColor("#8b755b"))
+        p.setFont(QFont("Sans", 9, QFont.Weight.Bold))
+        p.setPen(QColor("#5d5545"))
+        for label,x,y in (("BEDROOM",2,1),("LIVING ROOM",10,1),
+                          ("KITCHEN",2,7),("PLAYROOM / NURSERY",10,7)):
+            p.drawText(x*TILE, y*TILE+15, label)
 
     def draw_furniture(self, p, px, py, item):
         if item not in ITEMS:
@@ -232,11 +254,11 @@ class HouseDialog(QDialog):
             self.state.housewarming_granted = True
             self.save()
         self._migrate_old_room()
-        self.setWindowTitle("GhostPet • Little Haunted House v0.3")
-        self.setStyleSheet("""QDialog{background:#272a42;color:#f9edf9}
-QLabel{color:#f8e9fa;font-size:13px}
-QPushButton,QComboBox{background:#59648b;color:white;border:1px solid #9b91c0;
-border-radius:6px;padding:8px} QPushButton:hover{background:#8175aa}""")
+        self.setWindowTitle("GhostPet • Woodland Cottage v0.5.1")
+        self.setStyleSheet("""QDialog{background:#f1e4d2;color:#443e31}
+QLabel{color:#443e31;font-size:13px}
+QPushButton,QComboBox{background:#759278;color:white;border:1px solid #55735b;
+border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         body = QVBoxLayout(self)
         bar = QHBoxLayout()
         self.mode_button = QPushButton("✦ Explore mode")
