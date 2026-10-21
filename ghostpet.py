@@ -852,6 +852,8 @@ class DesktopBuddy(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         painter.save()
+        if self.lead.cursor_chaser_id == self.pet_id():
+            painter.translate(0,-[0,2,5,2][self.frame%4])
         if self.lead.pair_interaction in ("play","dance","highfive"):
             bounce = [1,4,6,3,0,3,6,4] if self.lead.pair_interaction=="play" else [0,4,1,6,0,5,2,7]
             painter.translate(0, -bounce[self.frame % 8])
@@ -883,6 +885,10 @@ class DesktopBuddy(QWidget):
             painter.setPen(QColor("#9f86b9"))
             painter.setFont(QFont("Sans",13,QFont.Weight.Bold))
             painter.drawText(57,18,"!!")
+        elif self.lead.cursor_chaser_id == self.pet_id():
+            painter.setPen(QColor("#be81a7"))
+            painter.setFont(QFont("Sans",15,QFont.Weight.Bold))
+            painter.drawText(53,17,"!")
         elif kind in ("dance","peekaboo","highfive","share_snack"):
             painter.setFont(QFont("Sans",14,QFont.Weight.Bold))
             painter.setPen(QColor("#a985bd"))
@@ -893,6 +899,9 @@ class DesktopBuddy(QWidget):
         if not self.isVisible():
             return
         self.frame += 1
+        if self.lead.cursor_chaser_id == self.pet_id():
+            self.update()
+            return
         kind = self.lead.pair_interaction
         if self.drag_start is None and self.frame % 3 == 0:
             geom = QApplication.primaryScreen().availableGeometry()
@@ -948,10 +957,12 @@ class DesktopBuddy(QWidget):
         self.update()
 
     def mousePressEvent(self, event):
+        self.lead.stop_cursor_chase(celebrate=False)
         if event.button() == Qt.MouseButton.RightButton:
             menu = QMenu(self)
             menu.addAction("♥ Care for this pet", lambda: self.lead.open_console_for(self.pet_id()))
             menu.addAction("⌂ Send this pet home", self.lead.dismiss_buddy)
+            menu.addAction("🐾 Chase pointer", lambda: self.lead.start_cursor_chase(self.pet_id(),manual=True))
             menu.addAction("🎾 Play together", lambda: self.lead.start_pair_interaction("play"))
             menu.addAction("♡ Nuzzle", lambda: self.lead.start_pair_interaction("nuzzle"))
             menu.exec(event.globalPosition().toPoint())
@@ -1388,6 +1399,8 @@ class RoamingPet(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         selected = current_pet(self.state)
         painter.save()
+        if self.cursor_chaser_id == self.state.desktop_pet_id:
+            painter.translate(0,-[0,2,5,2][self.frame%4])
         if self.pair_interaction in ("play","dance","highfive"):
             hops = [0,2,5,3,0,1,4,2] if self.pair_interaction=="play" else [0,5,2,7,0,6,2,5]
             painter.translate(0,-hops[self.frame%8])
@@ -1402,6 +1415,10 @@ class RoamingPet(QWidget):
             draw_pet(painter, self.width(), self.height(), self.state,
                      self.frame, scale=4, facing=self.facing)
         painter.restore()
+        if self.cursor_chaser_id == self.state.desktop_pet_id:
+            painter.setFont(QFont("Sans",15,QFont.Weight.Bold))
+            painter.setPen(QColor("#bf85a4"))
+            painter.drawText(87,22,"!")
         if self.pair_interaction in ("highfive","dance","peekaboo","share_snack"):
             painter.setFont(QFont("Sans",13,QFont.Weight.Bold))
             painter.setPen(QColor("#cf89ab"))
@@ -1547,7 +1564,8 @@ class RoamingPet(QWidget):
     def pair_ready(self):
         """Both desktop pets must exist and be awake before playing."""
         ids = active_desktop_ids(self.state)
-        if len(ids) != 2 or not self.buddy.isVisible() or self.going_home:
+        if (len(ids) != 2 or not self.buddy.isVisible() or self.going_home
+                or self.cursor_chaser_id != NONE):
             return False
         if self.dragging or self.buddy.drag_start is not None or self.cuddle_mode:
             return False
@@ -1802,6 +1820,7 @@ class RoamingPet(QWidget):
 
     def bring_selected_pet_to_desktop(self, pet_id: str) -> bool:
         """Select a primary without deleting the optional second desktop pet."""
+        self.stop_cursor_chase(celebrate=False)
         self.persist()
         self.buddy.persist()
         if pet_id == FOUNDER and not self.state.egg_hatched:
@@ -1862,6 +1881,7 @@ class RoamingPet(QWidget):
         return True
 
     def dismiss_buddy(self):
+        self.stop_cursor_chase(celebrate=False)
         self.pair_interaction = None
         self.persist()
         send_companion_home(self.state)
@@ -1882,6 +1902,7 @@ class RoamingPet(QWidget):
         self.bring_selected_pet_to_desktop(chosen)
 
     def send_home(self) -> None:
+        self.stop_cursor_chase(celebrate=False)
         self.pair_interaction = None
         if current_pet(self.state) is not False and self.state.desktop_companion_id != NONE:
             # Promote the buddy when the primary returns indoors; do not
@@ -1923,9 +1944,11 @@ class RoamingPet(QWidget):
 
     def animate(self) -> None:
         self.frame += 1
+        self.advance_pair_interaction()
+        self.maybe_start_cursor_chase()
+        self.advance_cursor_chase()
         self.buddy.advance()
         active = current_pet(self.state)
-        self.advance_pair_interaction()
         self.maybe_start_auto_interaction()
         if self.going_home and active is not False:
             # The target must be reachable by the WHOLE pet window. Near the
@@ -1958,6 +1981,9 @@ class RoamingPet(QWidget):
             self.update()
             return
         if active is False:
+            self.update()
+            return
+        if self.cursor_chaser_id == self.state.desktop_pet_id:
             self.update()
             return
         if self.active_roaming() and not self.active_sleeping() and not self.dragging:
@@ -2067,6 +2093,7 @@ class RoamingPet(QWidget):
             self.update()
 
     def mousePressEvent(self, event) -> None:
+        self.stop_cursor_chase(celebrate=False)
         if event.button() == Qt.MouseButton.LeftButton:
             self.drag_start = event.globalPosition().toPoint()
             self.drag_offset = event.globalPosition().toPoint() - self.pos()
@@ -2075,6 +2102,7 @@ class RoamingPet(QWidget):
             menu = QMenu(self)
             menu.addAction("♥ Care for pet", self.open_console)
             menu.addAction("⌂ Walk home", self.send_home)
+            menu.addAction("🐾 Chase pointer", lambda: self.start_cursor_chase(manual=True))
             if self.buddy.isVisible():
                 menu.addAction("🎾 Play together", lambda: self.start_pair_interaction("play"))
                 menu.addAction("♡ Nuzzle", lambda: self.start_pair_interaction("nuzzle"))
