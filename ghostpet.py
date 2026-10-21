@@ -401,6 +401,33 @@ def clamp(value: float, minimum: float = 0, maximum: float = 100) -> float:
     return max(minimum, min(maximum, value))
 
 
+CURSOR_GAP = 30  # The pointer remains outside the pet window, not underneath it.
+CURSOR_CHASE_SECONDS = 8.0
+CURSOR_CHASE_COOLDOWN = 75.0
+
+
+def cursor_chase_destination(window, cursor, screen, gap=CURSOR_GAP):
+    """Return a safe window top-left that does not cover the mouse pointer.
+
+    Prefer the pet's existing side of the pointer. If that side would move
+    the pet off-screen, choose the opposite side. Stop if neither fits.
+    This helper never moves the cursor or injects mouse events.
+    """
+    left = cursor.x() - window.width() - gap
+    right = cursor.x() + gap
+    x_min = screen.left()
+    x_max = screen.right() - window.width() + 1
+    if x_max < x_min:
+        return None
+    options = [x for x in (left, right) if x_min <= x <= x_max]
+    if not options:
+        return None
+    x = min(options, key=lambda p: abs(p - window.x()))
+    y = max(screen.top(), min(cursor.y() - window.height() // 2,
+                              screen.bottom() - window.height() + 1))
+    return QPoint(int(x), int(y))
+
+
 @dataclass
 class PetState:
     name: str = "Byte"
@@ -448,6 +475,7 @@ class PetState:
     preview_coins_claimed: bool = False
     last_bowl_meal: float = 0.0
     auto_social: bool = True
+    auto_cursor_chase: bool = True
 
     @classmethod
     def load(cls) -> "PetState":
