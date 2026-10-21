@@ -2,11 +2,13 @@
 import os
 os.environ.setdefault("QT_QPA_PLATFORM","offscreen")
 import unittest
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
-from ghostpet import PetState
+from ghostpet import PetState, claim_single_instance_lock
 from house import HouseDialog, HouseCanvas, TILE, W, H
 
 
@@ -14,6 +16,20 @@ class HousePresenceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication(["ghostpet-presence"])
+
+    def test_second_game_instance_cannot_claim_household_save(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("ghostpet.DATA_DIR", Path(tmp)):
+                first = claim_single_instance_lock()
+                self.assertIsNotNone(first)
+                try:
+                    second = claim_single_instance_lock()
+                    self.assertIsNone(second)
+                finally:
+                    first.close()
+                recovered = claim_single_instance_lock()
+                self.assertIsNotNone(recovered)
+                recovered.close()
 
     def test_desktop_cat_is_never_rendered_indoors_even_with_stale_save_flag(self):
         state = PetState(
