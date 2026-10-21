@@ -359,10 +359,16 @@ class HouseCanvas(QWidget):
             pos = self.dialog.entry_tile(entry)
             if pos and pos not in self.dialog.wall_tiles():
                 self.draw_furniture(p, pos[0] * TILE, pos[1] * TILE, entry.get("item"))
-        if self.dialog.state.location == "house" and self.dialog.state.egg_hatched:
+        # desktop_pet_id is authoritative. Saved household dictionaries can
+        # retain an old "house" field; never draw the active desktop pet twice.
+        active_id = getattr(self.dialog.state, "desktop_pet_id", "founder")
+        if (self.dialog.state.location == "house"
+                and active_id != "founder"
+                and self.dialog.state.egg_hatched):
             self.draw_pet(p)
         for housemate in self.dialog.state.adopted_pets or []:
-            if housemate.get("location", "house") == "house":
+            if (housemate.get("id") != active_id
+                    and housemate.get("location", "house") != "desktop"):
                 self.draw_housemate(p, housemate)
         if self.dialog.mode == "Decorate":
             p.setPen(QPen(QColor("#bdb1e0"), 1, Qt.PenStyle.DotLine))
@@ -651,6 +657,13 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         return owned | built_in_occupied(self.state.house_layout)
 
     def refresh(self):
+        # Repair stale presence flags when Pocket Care changes the roaming pet
+        # while the cottage window is open.
+        active_id = getattr(self.state, "desktop_pet_id", "founder")
+        for housemate in self.state.adopted_pets or []:
+            expected = "desktop" if housemate.get("id") == active_id else "house"
+            if housemate.get("location") != expected:
+                housemate["location"] = expected
         self.balance.setText(f"🪙 {self.state.coins}")
         self.preview_button.setVisible(not self.state.preview_coins_claimed)
         self.door_button.setText("↗ Bring selected pet outside" if current_pet(self.state) is False
