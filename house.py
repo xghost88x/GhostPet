@@ -1138,6 +1138,16 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
             self.status.setText("Furniture stored! Its unlock stays yours.")
             self.refresh()
 
+    def feed_indoor_pets(self):
+        """Real-time feeding when the house window is open."""
+        fed = house_feed_cycle(self.state,require_near=True)
+        if fed:
+            names = [pet_name(self.state,pid) for pid in fed]
+            self.status.setText("🥣 "+", ".join(names)+" ate from a food bowl! Hunger restored.")
+            self.save()
+            self.refresh()
+        return fed
+
     def tick(self):
         if self.mode != "Explore":
             return
@@ -1164,13 +1174,23 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
                 self.save()
                 self.update_friendship()
         for pet in self.state.adopted_pets or []:
-            if pet.get("location", "house") == "house" and random.random() < .18:
+            if pet.get("location", "house") == "house" and random.random() < .22:
                 x, y = int(pet.get("x",12)), int(pet.get("y",8))
+                current = (x,y)
                 options = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
                 options = [(a,b) for a,b in options if 0<a<W-1 and 0<b<H-1
                            and (a,b) not in self.wall_tiles() and (a,b) not in occupied]
                 if options:
-                    pet["x"], pet["y"] = random.choice(options)
+                    hungry = float(pet.get("hunger",85)) < 80
+                    target = self.food_bowl_nearby(current) if hungry else None
+                    if target:
+                        bowl_pos = self.entry_tile(target)
+                        pet["x"],pet["y"] = min(
+                            options, key=lambda t: abs(t[0]-bowl_pos[0])+
+                            abs(t[1]-bowl_pos[1]))
+                    else:
+                        pet["x"],pet["y"] = random.choice(options)
+        self.feed_indoor_pets()
         if self.state.location != "house":
             self.canvas.update()
             return
@@ -1181,6 +1201,10 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         elif self.idle_ticks > 0:
             self.idle_ticks -= 1
             self.activity = ""
+        elif self.state.hunger < 80 and self.feeding_target(self.position):
+            self.path = self.feeding_target(self.position)
+            self.idle_ticks = 2
+            self.activity = "heading to food"
         elif random.random() < .12:
             possible = [(x, y) for x in range(1, W-1) for y in range(1, H-1)
                         if (x, y) not in self.wall_tiles() and (x, y) not in self.blocked()]
