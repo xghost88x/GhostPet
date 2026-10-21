@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.6.4-preview — Distinct Home Upgrades & No Duplicate Cats
+
+- Scale desktop Cat art to 2× and other adopted sprites to 3×, retaining the Founder mouse at its approved size.
+- Use authoritative desktop_pet_id for rendering: the roaming companion cannot simultaneously appear indoors, even with outdated saved location flags.
+- Add a single-instance save lock to avoid competing pet windows and conflicting household saves.
+- Give Open Plan larger missing wall partitions, a continuous sage great-room floor, furniture and a breakfast island.
+- Give Sunny Garden a dramatically different open conservatory with glazed tile floor, foliage, benches and water accents.
+- Show the active purchased cottage by name in the house title bar.
+- Add tests for significant image differences between three layouts, desktop cat sizing, duplicate pet prevention and game instance locking.
+
+
 ## v0.6.3-preview — Cottage Fit, Layout Unlock UI & Cuddles
 
 - Scale the cottage automatically to fit the available Zorin display and coordinate-match mouse clicks to the zoom factor.
