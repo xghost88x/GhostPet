@@ -952,6 +952,14 @@ class CareConsole(QDialog):
         self.buddy_button = QPushButton("♡ Invite selected pet as Buddy")
         self.buddy_button.clicked.connect(self.invite_selected)
         outer.addWidget(self.buddy_button)
+        pair_actions = QHBoxLayout()
+        self.pair_play_button = QPushButton("🎾 Play Together")
+        self.pair_play_button.clicked.connect(lambda: self.start_pair_action("play"))
+        pair_actions.addWidget(self.pair_play_button)
+        self.pair_nuzzle_button = QPushButton("♡ Nuzzle")
+        self.pair_nuzzle_button.clicked.connect(lambda: self.start_pair_action("nuzzle"))
+        pair_actions.addWidget(self.pair_nuzzle_button)
+        outer.addLayout(pair_actions)
         self.details = QWidget()
         details = QVBoxLayout(self.details)
         details.setContentsMargins(0, 0, 0, 0)
@@ -1062,6 +1070,16 @@ class CareConsole(QDialog):
             self.tip.setText("Hatch or adopt this pet before inviting them.")
         self.refresh()
 
+    def start_pair_action(self, kind):
+        if not self.pet.start_pair_interaction(kind):
+            if self.pet.pair_interaction:
+                self.tip.setText("The pets are busy! Try again in a moment.")
+            else:
+                self.tip.setText("Both pets must be awake and outside to interact.")
+        else:
+            self.tip.setText("Watch the pets interact on your desktop! ♡")
+        self.refresh()
+
     def update_friend_meter(self, _index=None):
         partner = self.friend_partner.currentData()
         if partner and partner != self.selected_id:
@@ -1167,6 +1185,8 @@ class CareConsole(QDialog):
         self.buddy_button.setEnabled(not is_lead and
                                       (len(state.adopted_pets or []) > 0 or
                                        self.selected_id != FOUNDER))
+        for btn in (self.pair_play_button, self.pair_nuzzle_button):
+            btn.setEnabled(self.pet.pair_ready() and not self.pet.pair_interaction)
         other_ids = [id_ for _, id_ in choices if id_ != self.selected_id]
         previous = self.friend_partner.currentData()
         partner = previous if previous in other_ids else (other_ids[0] if other_ids else None)
