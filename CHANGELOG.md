@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.1-preview — Desktop Buddy Interactions & Clean Room Art
+
+- Remove floating room-name plaques and text overlays from Woodland, Open Plan and Sunny Garden; retain all layout upgrades and navigation.
+- Add Pocket Care buttons and both pets' right-click actions for **Play Together** and **Nuzzle**.
+- Add visible, timed, independent duo actions: greeting, approaching to nuzzle, bouncing during play and chasing/tag.
+- Allow occasional spontaneous actions when two awake, unoccupied pets are close together.
+- Reward the shared pair friendship after completed actions; play and chase also add a small happiness boost and energy cost.
+- Cancel unfinished interactions when a buddy goes home, the active pair changes, or either becomes unavailable; prevent repeated per-frame rewards.
+- Preserve original Founder pixel sprite, its saved state, adopted pets, coins, house layouts and nursery.
+- Add GUI regressions for visual approach, explicit controls, autonomous interactions, cooldowns, one-time friendship rewards and removal of artwork text.
+
+
 ## v0.7.0-preview — Three Distinctly Designed Homes
 
 - Recompose Open Plan from scratch: cozy private nook, long kitchen wall, large breakfast island, open great room, L-shaped sofa and large pet corner. Do not reuse the Woodland living/kitchen/nursery vignette.
