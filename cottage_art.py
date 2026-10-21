@@ -247,6 +247,15 @@ def built_in_occupied(layout):
 
 def draw_room_vignettes(p, layout):
     """Recognizable, larger-than-one-tile furnishings for a lived-in cottage."""
+    # Keep larger drawings within the actual 18×12 cottage boundaries.
+    p.save()
+    p.setClipRect(32, 32, 512, 320)
+
+    # Room-specific scales keep furniture proportional to each little room.
+    p.save()
+    p.translate(145, 120)
+    p.scale(0.82, 0.82)
+    p.translate(-145, -120)
     # Distinct bedside furniture, a quilted double bed and a framed painting.
     box(p,136,66,80,92,"#74553e")
     box(p,132,61,80,92,"#b78d62")
@@ -279,6 +288,11 @@ def draw_room_vignettes(p, layout):
     for xx in (106,124):               # soft slippers
         box(p,xx,155,13,6,"#e4ceb2")
 
+    p.restore()
+    p.save()
+    p.translate(419, 126)
+    p.scale(0.82, 0.82)
+    p.translate(-419, -126)
     # Proper upholstered 3-seat couch and round tea table.
     box(p,326,100,127,63,"#4f685b")
     box(p,335,91,110,63,"#709580")
@@ -307,6 +321,11 @@ def draw_room_vignettes(p, layout):
     box(p,475,57,29,7,"#588572")
     box(p,484,48,7,6,"#fae6a9")
 
+    p.restore()
+    p.save()
+    p.translate(144, 282)
+    p.scale(0.82, 0.82)
+    p.translate(-144, -282)
     # Kitchen: three-door pantry, copper cookware and dining nook.
     box(p,35,241,39,97,"#765640")
     box(p,38,244,32,90,"#b9946b")
@@ -333,6 +352,11 @@ def draw_room_vignettes(p, layout):
     box(p,205,288,6,2,"#998066")
     box(p,188,287,4,2,"#83a783")
 
+    p.restore()
+    p.save()
+    p.translate(416, 285)
+    p.scale(0.82, 0.82)
+    p.translate(-416, -285)
     if layout == "garden":
         # The premium layout replaces nursery furnishings with a conservatory.
         for xx in (328,374,420,466):
@@ -376,6 +400,7 @@ def draw_room_vignettes(p, layout):
         box(p,409,280,3,3,"#453a34")
         box(p,403,285,3,3,"#715043")
 
+    p.restore()
     # Cozy small touches: overhead lamps and a welcome runner.
     for xx,yy in ((218,41),(512,187),(165,204)):
         box(p,xx,yy,4,8,"#937458")
@@ -384,3 +409,4 @@ def draw_room_vignettes(p, layout):
     for xx,yy in ((245,113),(95,195),(403,195)):
         box(p,xx,yy,29,12,"#9c8468")
         box(p,xx+3,yy+3,23,6,"#e2ceb2")
+    p.restore()
