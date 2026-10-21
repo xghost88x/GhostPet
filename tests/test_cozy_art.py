@@ -48,7 +48,10 @@ class SpriteAndArtTests(unittest.TestCase):
             reserved=built_in_occupied(layout)
             self.assertTrue(reserved)
             self.assertTrue(all(tile not in walls_for_layout(layout) for tile in reserved))
-            self.assertNotIn((2,3),reserved)
+            # Open Plan now uses the old starter's spawn tile for its bed.
+            # The HouseDialog relocates pets safely on each renovation.
+            if layout != "open":
+                self.assertNotIn((2,3),reserved)
             self.assertNotIn((3,6),reserved)
             self.assertNotIn((12,6),reserved)
         self.assertNotEqual(samples[0],samples[2],
