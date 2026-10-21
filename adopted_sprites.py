@@ -1,6 +1,7 @@
 """Species-specific desktop sprites; the approved Founder mouse is not modified."""
 from __future__ import annotations
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QColor, QPolygon, QPen
 
 COLORS = {
     "Ghost": ("#d5c1f4", "#8d80c7", "#ffadca"),
@@ -12,8 +13,98 @@ COLORS = {
 }
 
 
+
+def draw_cat(p, width, height, pet, frame, scale=4, facing=1):
+    """Distinct 28px-wide chibi cat: triangular ears, cheeks, whiskers and curled tail.
+
+    Kept separate from the generic species body so new shading cannot bury
+    the ears or turn the face into a featureless square.
+    """
+    fur = QColor("#edb06d")
+    shadow = QColor("#ae734d")
+    ink = QColor("#4c453e")
+    pink = QColor("#efaeb9")
+    cream = QColor("#fff0d9")
+    p.save()
+    if facing < 0:
+        p.translate(width, 0)
+        p.scale(-1, 1)
+    p.translate((width - 28 * scale) // 2, (height - 28 * scale) // 2
+                + (frame % 2 if not pet.get("sleeping", False) else 0))
+    p.scale(scale, scale)
+    def pix(x,y,w,h,c):
+        p.fillRect(x,y,w,h,c)
+    def polygon(points, color):
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(color)
+        p.drawPolygon(QPolygon([QPoint(x,y) for x,y in points]))
+
+    # A striped upward-curled tail clearly separated from the body.
+    pix(22,18,3,6,ink)
+    pix(24,14,3,6,ink)
+    pix(24,12,4,4,ink)
+    pix(25,13,2,4,fur)
+    pix(24,17,2,3,fur)
+    pix(23,21,2,3,fur)
+    pix(25,15,2,2,shadow)
+
+    # Tiny seated body, belly and two separate paws.
+    p.setPen(ink)
+    p.setBrush(ink)
+    p.drawRoundedRect(7,15,17,12,6,6)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(fur)
+    p.drawRoundedRect(8,16,15,10,5,5)
+    p.setBrush(cream)
+    p.drawEllipse(11,18,9,7)
+    pix(8,24,6,4,ink);pix(17,24,6,4,ink)
+    pix(9,24,4,3,fur);pix(18,24,4,3,fur)
+    for xx in (10,12,19,21):
+        pix(xx,26,1,1,shadow)
+
+    # Ears come BEFORE the oversized, softly rounded head.
+    polygon([(3,12),(4,1),(13,9)],ink)
+    polygon([(15,9),(24,1),(25,12)],ink)
+    polygon([(5,10),(6,4),(12,10)],fur)
+    polygon([(17,10),(22,4),(23,10)],fur)
+    polygon([(7,9),(7,6),(11,10)],pink)
+    polygon([(19,10),(22,6),(22,9)],pink)
+
+    p.setPen(ink)
+    p.setBrush(ink)
+    p.drawRoundedRect(3,8,23,15,8,8)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(fur)
+    p.drawRoundedRect(4,9,21,13,7,7)
+    # Wide cheek tufts, soft white muzzle and tabby forehead stripes.
+    pix(3,17,4,4,fur);pix(22,17,4,4,fur)
+    p.setBrush(cream)
+    p.drawEllipse(9,17,11,5)
+    pix(11,10,2,3,shadow);pix(15,10,2,3,shadow)
+    pix(13,9,2,3,shadow)
+
+    if pet.get("sleeping", False) or frame % 50 == 0:
+        pix(8,15,4,1,ink);pix(18,15,4,1,ink)
+    else:
+        pix(9,14,3,3,ink);pix(18,14,3,3,ink)
+        pix(9,14,1,1,cream);pix(18,14,1,1,cream)
+    pix(6,18,3,2,pink);pix(21,18,3,2,pink)
+    polygon([(13,18),(17,18),(15,20)],pink)
+    pix(15,20,1,2,ink)
+    pix(13,21,2,1,ink);pix(16,21,2,1,ink)
+
+    # Long, symmetric whiskers are a defining cat feature at this scale.
+    p.setPen(QPen(ink,1))
+    for x1,y1,x2,y2 in ((2,17,0,16),(3,19,0,19),(3,21,0,22),
+                        (25,17,27,16),(25,19,27,19),(25,21,27,22)):
+        p.drawLine(x1,y1,x2,y2)
+    p.restore()
+
 def draw_adopted_pet(painter, width, height, pet, frame, scale=4, facing=1):
     species = pet.get("species", "Ghost")
+    if species == "Cat":
+        draw_cat(painter, width, height, pet, frame, scale, facing)
+        return
     bright, shaded, blush = (QColor(x) for x in COLORS.get(species, COLORS["Ghost"]))
     dark = QColor("#334143")
     light = QColor("#fff7e9")
