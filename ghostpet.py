@@ -6,6 +6,7 @@ Requires PySide6. Designed for GNOME/X11 (or XWayland) on Zorin OS.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import math
 import os
@@ -1355,10 +1356,31 @@ class RoamingPet(QWidget):
         QApplication.quit()
 
 
+def claim_single_instance_lock():
+    """Prevent two desktop pets from loading and writing the same save at once."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    handle = (DATA_DIR / ".ghostpet-running.lock").open("a+")
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
+        return None
+    return handle
+
+
 def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setQuitOnLastWindowClosed(False)
+    # Keep this open for the process lifetime. The OS releases the file lock
+    # automatically when the app exits for updates or shutdown.
+    instance_lock = claim_single_instance_lock()
+    if instance_lock is None:
+        QMessageBox.information(
+            None, "Ghost Pet is already running",
+            "Ghost Pet is already open. Click the existing desktop pet or "
+            "its tray icon to open Pocket Care.")
+        return
     state = PetState.load()
     pet = RoamingPet(state)
     if current_pet(state) is not False:
