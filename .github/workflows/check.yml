@@ -11,7 +11,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Check source syntax
-        run: python -m compileall -q ghostpet.py activities.py house.py nursery.py updater.py updater_core.py tests
+        run: python -m compileall -q ghostpet.py activities.py house.py nursery.py pet_presence.py adopted_sprites.py cottage_art.py updater.py updater_core.py tests
       - name: Check launcher scripts
         run: bash -n start.sh install.sh update.sh
       - name: Test house floor plans and safe updates
