@@ -1167,6 +1167,9 @@ class RoamingPet(QWidget):
         self.bubble_until = 0.0
         self.friend_heart_until = 0.0
         self.last_friend_interaction = 0.0
+        self.pair_interaction = None
+        self.pair_interaction_until = 0.0
+        self.pair_interaction_pair = ()
         self.setWindowTitle("GhostPet")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool |
                             Qt.WindowType.WindowStaysOnTopHint)
@@ -1232,15 +1235,18 @@ class RoamingPet(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         selected = current_pet(self.state)
+        painter.save()
+        if self.pair_interaction == "play":
+            painter.translate(0, -[0,2,5,3,0,1,4,2][self.frame % 8])
         if isinstance(selected, dict):
-            # 28px cat silhouette at 2x = 56px, comfortably smaller than
-            # the 80px house portal. Keep the beloved Founder mouse at 4x.
+            # Keep original Founder mouse pixel artwork untouched.
             scale = 2 if selected.get("species") == "Cat" else 3
             draw_adopted_pet(painter, self.width(), self.height(), selected,
                              self.frame, scale=scale, facing=self.facing)
         elif selected is None:
             draw_pet(painter, self.width(), self.height(), self.state,
                      self.frame, scale=4, facing=self.facing)
+        painter.restore()
         if self.active_sleeping():
             painter.setPen(QColor("#bee8fa"))
             painter.setFont(QFont("monospace", 12, QFont.Weight.Bold))
@@ -1261,6 +1267,91 @@ class RoamingPet(QWidget):
         self.bubble_text = text[:80]
         self.bubble_until = time.monotonic() + 5
         self.update()
+
+    def pair_ready(self):
+        """Both desktop pets must exist and be awake before playing."""
+        ids = active_desktop_ids(self.state)
+        if len(ids) != 2 or not self.buddy.isVisible() or self.going_home:
+            return False
+        if self.dragging or self.buddy.drag_start is not None or self.cuddle_mode:
+            return False
+        for pet_id in ids:
+            record = find_adopted(self.state, pet_id)
+            sleeping = self.state.sleeping if pet_id == FOUNDER else (
+                record.get("sleeping", False) if record else True)
+            if sleeping:
+                return False
+        return True
+
+    def start_pair_interaction(self, kind=None):
+        """Begin a bounded desktop interaction; reward only at completion."""
+        actions = ("greet", "nuzzle", "play", "chase")
+        if kind is not None and kind not in actions:
+            raise ValueError(f"Unknown pet interaction: {kind}")
+        if not self.pair_ready():
+            if self.console:
+                self.console.tip.setText(
+                    "Invite two awake pets onto the desktop to play together.")
+            return False
+        if self.pair_interaction:
+            return False
+        kind = kind or random.choice(actions)
+        durations = {"greet":2.8, "nuzzle":3.8, "play":5.0, "chase":6.0}
+        self.pair_interaction = kind
+        self.pair_interaction_pair = tuple(active_desktop_ids(self.state))
+        self.pair_interaction_until = time.monotonic() + durations[kind]
+        self.last_friend_interaction = time.monotonic()
+        self.friend_heart_until = (
+            time.monotonic() + durations[kind] if kind in ("nuzzle","play") else 0)
+        self.idle_ticks = 0
+        self.say({
+            "greet":"Oh, hello! ♡",
+            "nuzzle":"Cuddle buddies! ♥",
+            "play":"Let's play! ✦",
+            "chase":"Catch me! ♡",
+        }[kind])
+        self.buddy.update()
+        self.update()
+        return True
+
+    def advance_pair_interaction(self):
+        """Keep actions interactive and safely cancel on roster changes."""
+        if not self.pair_interaction:
+            return
+        if (tuple(active_desktop_ids(self.state)) != self.pair_interaction_pair
+                or not self.pair_ready()):
+            self.pair_interaction = None
+            self.pair_interaction_pair = ()
+            self.friend_heart_until = 0
+            self.buddy.update()
+            return
+        if time.monotonic() < self.pair_interaction_until:
+            return
+        kind = self.pair_interaction
+        a,b = self.pair_interaction_pair
+        strengthen_friendship(
+            self.state, a, b,
+            {"greet":0.7,"nuzzle":1.6,"play":2.6,"chase":2.1}[kind])
+        if kind in ("play", "chase"):
+            for pet_id in (a,b):
+                record = find_adopted(self.state, pet_id)
+                if record is None:
+                    self.state.happiness = clamp(self.state.happiness+3)
+                    self.state.energy = clamp(self.state.energy-1)
+                else:
+                    record["happiness"] = clamp(float(record.get("happiness",80))+3)
+                    record["energy"] = clamp(float(record.get("energy",85))-1)
+        self.pair_interaction = None
+        self.pair_interaction_pair = ()
+        self.friend_heart_until = time.monotonic()+1.2
+        self.last_friend_interaction = time.monotonic()
+        self.say("That was fun! ♡")
+        self.persist()
+        self.buddy.update()
+        if self.house_dialog and self.house_dialog.isVisible():
+            self.house_dialog.update_friendship()
+        if self.console:
+            self.console.refresh()
 
     def maybe_speak(self) -> None:
         selected = current_pet(self.state)
@@ -1429,6 +1520,7 @@ class RoamingPet(QWidget):
         self.move(px, py)
         self.show()
         self.raise_()
+        self.pair_interaction = None
         self.buddy.sync_presence()
         name = chosen.get("name", "Buddy") if isinstance(chosen, dict) else self.state.name
         self.say(f"{name} is here! ♡")
@@ -1459,6 +1551,7 @@ class RoamingPet(QWidget):
         return True
 
     def dismiss_buddy(self):
+        self.pair_interaction = None
         self.persist()
         send_companion_home(self.state)
         self.buddy.sync_presence()
@@ -1478,6 +1571,7 @@ class RoamingPet(QWidget):
         self.bring_selected_pet_to_desktop(chosen)
 
     def send_home(self) -> None:
+        self.pair_interaction = None
         if current_pet(self.state) is not False and self.state.desktop_companion_id != NONE:
             # Promote the buddy when the primary returns indoors; do not
             # accidentally send both home or paint the same pet twice.
@@ -1520,23 +1614,13 @@ class RoamingPet(QWidget):
         self.frame += 1
         self.buddy.advance()
         active = current_pet(self.state)
-        if (active is not False and self.buddy.isVisible()
-                and abs(self.x()-self.buddy.x()) < 150
-                and abs(self.y()-self.buddy.y()) < 95
-                and time.monotonic()-self.last_friend_interaction > 20
-                and not self.active_sleeping()
+        self.advance_pair_interaction()
+        if (not self.pair_interaction and self.pair_ready()
+                and abs(self.x()-self.buddy.x()) < 175
+                and abs(self.y()-self.buddy.y()) < 110
+                and time.monotonic()-self.last_friend_interaction > 24
                 and random.random() < .035):
-            a,b = self.state.desktop_pet_id, self.state.desktop_companion_id
-            if a != b and b != NONE:
-                strengthen_friendship(self.state, a, b, 1.6)
-                self.last_friend_interaction = time.monotonic()
-                self.friend_heart_until = time.monotonic() + 2.5
-                self.say(random.choice(["♡ Hi, friend!", "Wanna play?", "You're my buddy! ♡"]))
-                self.persist()
-                if self.house_dialog and self.house_dialog.isVisible():
-                    self.house_dialog.refresh()
-                if self.console:
-                    self.console.refresh()
+            self.start_pair_interaction()
         if self.going_home and active is not False:
             # The target must be reachable by the WHOLE pet window. Near the
             # taskbar/screen edge the window manager can clamp moves, so aiming
@@ -1571,11 +1655,17 @@ class RoamingPet(QWidget):
             self.update()
             return
         if self.active_roaming() and not self.active_sleeping() and not self.dragging:
+            if self.pair_interaction == "chase" and self.frame % 42 == 0:
+                self.facing *= -1
+            if self.pair_interaction in ("nuzzle","greet"):
+                self.update()
+                return
             if self.idle_ticks > 0:
                 self.idle_ticks -= 1
             else:
                 geom = QApplication.primaryScreen().availableGeometry()
-                next_x = self.x() + self.facing * 2
+                speed = 3 if self.pair_interaction == "chase" else 2
+                next_x = self.x() + self.facing * speed
                 if next_x < geom.left() or next_x > geom.right() - self.width():
                     self.facing *= -1
                     self.idle_ticks = 18
@@ -1675,6 +1765,9 @@ class RoamingPet(QWidget):
             menu = QMenu(self)
             menu.addAction("♥ Care for pet", self.open_console)
             menu.addAction("⌂ Walk home", self.send_home)
+            if self.buddy.isVisible():
+                menu.addAction("🎾 Play together", lambda: self.start_pair_interaction("play"))
+                menu.addAction("♡ Nuzzle", lambda: self.start_pair_interaction("nuzzle"))
             if self.cuddle_mode:
                 menu.addAction("Cancel cuddle mode", self.open_cuddles)
             menu.addAction("Pause / resume walking", self.toggle_roaming)
