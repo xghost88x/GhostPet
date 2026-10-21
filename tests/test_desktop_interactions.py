@@ -85,9 +85,13 @@ class DesktopInteractionTests(unittest.TestCase):
         self.assertFalse(self.lead.console.pair_ready() if hasattr(self.lead.console,"pair_ready") else self.lead.pair_ready())
 
     def test_auto_interactions_start_after_cooldown(self):
-        self.lead.buddy.move(self.lead.x()+96,self.lead.y())
+        geometry=QApplication.primaryScreen().availableGeometry()
+        self.lead.move(geometry.left()+80,geometry.top()+80)
+        self.lead.buddy.move(geometry.left()+176,geometry.top()+80)
         self.lead.last_friend_interaction=time.monotonic()-40
-        with patch("ghostpet.random.random",return_value=0.0):
+        self.assertTrue(self.lead.pair_ready())
+        with patch.object(self.lead.buddy,"advance"), \
+             patch("ghostpet.random.random",return_value=0.0):
             self.lead.animate()
         self.assertIn(self.lead.pair_interaction,("greet","nuzzle","play","chase"))
 
