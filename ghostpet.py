@@ -38,6 +38,9 @@ from PySide6.QtWidgets import (
 from activities import GameDialog, pick_speech
 from house import HouseDialog
 from nursery import NurseryDialog
+from pet_presence import (FOUNDER, NONE, bring_to_desktop, current_pet,
+                          find_adopted, repair_presence, send_desktop_pet_home)
+from adopted_sprites import draw_adopted_pet
 
 
 APP_NAME = "GhostPet"
@@ -97,6 +100,7 @@ class PetState:
     nursery_egg_taps: int = -1
     house_layout: str = "cottage"
     unlocked_house_layouts: list | None = None
+    desktop_pet_id: str = "founder"
 
     @classmethod
     def load(cls) -> "PetState":
@@ -126,6 +130,7 @@ class PetState:
             setattr(state, stat, clamp(float(getattr(state, stat))))
         state.affection = clamp(float(state.affection))
         state.adopted_pets = state.adopted_pets if isinstance(state.adopted_pets, list) else []
+        repair_presence(state)
         state.nursery_egg_taps = int(state.nursery_egg_taps) if isinstance(state.nursery_egg_taps, int) else -1
         # v0.5.2 layout progress is independent of the original pet and furniture.
         valid_layouts = ("cottage", "open", "garden")
@@ -427,6 +432,10 @@ class CareConsole(QDialog):
         self.selector = QComboBox()
         self.selector.currentIndexChanged.connect(self.select_pet)
         outer.addWidget(self.selector)
+        self.summon_button = QPushButton("🐾 Bring selected pet to desktop")
+        self.summon_button.setToolTip("Swap which companion is walking on your desktop")
+        self.summon_button.clicked.connect(self.summon_selected)
+        outer.addWidget(self.summon_button)
         self.details = QWidget()
         details = QVBoxLayout(self.details)
         details.setContentsMargins(0, 0, 0, 0)
@@ -505,6 +514,12 @@ class CareConsole(QDialog):
 
     def select_pet(self, _index):
         self.selected_id = self.selector.currentData() or "founder"
+        self.refresh()
+
+    def summon_selected(self):
+        selected = self.selected_id
+        if self.pet.bring_selected_pet_to_desktop(selected):
+            self.tip.setText("That companion is now on your desktop! ♡")
         self.refresh()
 
     def toggle_compact(self):
@@ -586,8 +601,13 @@ class CareConsole(QDialog):
             f"♡ Affection {round(adopted.get('affection',30))}% · {adopted.get('trait','Curious')}"
             if adopted is not None else
             f"♡ Affection {round(state.affection)}% · {state.personality} · 🪙 {state.coins}")
-        self.roaming_button.setVisible(adopted is None)
-        self.roaming_button.setText("⏸ Pause walk" if state.roaming else "▶ Resume walk")
+        active = state.desktop_pet_id == self.selected_id and current_pet(state) is not False
+        self.summon_button.setText("✓ This pet is on your desktop" if active
+                                   else "🐾 Bring selected pet to desktop")
+        self.summon_button.setEnabled(not active)
+        self.roaming_button.setVisible(active)
+        roaming = adopted.get("roaming", True) if adopted is not None else state.roaming
+        self.roaming_button.setText("⏸ Pause walk" if roaming else "▶ Resume walk")
         self.colors.setEnabled(adopted is None)
         self.tip.setStyleSheet("color:#706c5b;font-size:11px;")
 
@@ -621,12 +641,16 @@ class RoamingPet(QWidget):
         self.setToolTip("Left-click to care • Drag to move • Right-click for menu")
 
         screen = QApplication.primaryScreen().availableGeometry()
-        start_x = state.x if 0 <= state.x <= screen.right() else screen.center().x()
-        start_y = state.y if 0 <= state.y <= screen.bottom() else screen.bottom() - self.height()
+        active = current_pet(state)
+        coords = active if isinstance(active, dict) else None
+        saved_x = coords.get("desktop_x", state.x) if coords else state.x
+        saved_y = coords.get("desktop_y", state.y) if coords else state.y
+        start_x = saved_x if 0 <= saved_x <= screen.right() else screen.center().x()
+        start_y = saved_y if 0 <= saved_y <= screen.bottom() else screen.bottom() - self.height()
         self.move(start_x, start_y)
         self.portal = HomePortal(self)
         self.portal.show()
-        if state.location == "house":
+        if current_pet(state) is False:
             self.hide()
 
         self.timer = QTimer(self)
@@ -671,9 +695,14 @@ class RoamingPet(QWidget):
     def paintEvent(self, _event) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        draw_pet(painter, self.width(), self.height(), self.state,
-                 self.frame, scale=4, facing=self.facing)
-        if self.state.sleeping:
+        selected = current_pet(self.state)
+        if isinstance(selected, dict):
+            draw_adopted_pet(painter, self.width(), self.height(), selected,
+                             self.frame, scale=4, facing=self.facing)
+        elif selected is None:
+            draw_pet(painter, self.width(), self.height(), self.state,
+                     self.frame, scale=4, facing=self.facing)
+        if self.active_sleeping():
             painter.setPen(QColor("#bee8fa"))
             painter.setFont(QFont("monospace", 12, QFont.Weight.Bold))
             painter.drawText(91, 20 + (self.frame // 6) % 5, "Zz")
@@ -695,8 +724,14 @@ class RoamingPet(QWidget):
         self.update()
 
     def maybe_speak(self) -> None:
-        if self.state.egg_hatched and self.state.location == "desktop" and not self.state.sleeping and random.random() < .65:
-            self.say(pick_speech(self.state))
+        selected = current_pet(self.state)
+        if selected is False or self.active_sleeping():
+            return
+        if random.random() < .65:
+            if isinstance(selected, dict):
+                self.say(random.choice(["Hi hi! ♡", "Can we play?", "I love our cottage!", "♡"]))
+            elif self.state.egg_hatched:
+                self.say(pick_speech(self.state))
 
     def activity_reward(self, kind: str, score: int) -> None:
         state = self.state
@@ -731,6 +766,9 @@ class RoamingPet(QWidget):
         self.game_dialog.show()
 
     def open_cuddles(self) -> None:
+        if self.state.desktop_pet_id != FOUNDER:
+            self.say("Cuddle our friends in Pocket Care! ♡")
+            return
         if self.state.sleeping or not self.state.egg_hatched:
             self.say("Zzz...")
             return
@@ -794,19 +832,61 @@ class RoamingPet(QWidget):
                                         self.return_from_house, self.send_home, self)
         self.house_dialog.show()
 
-    def return_from_house(self) -> None:
-        self.state.location = "desktop"
-        self.going_home = False
-        self.move(self.portal.x() - 55, self.portal.y())
-        self.show()
-        self.say("I'm baaaack! ♡")
+    def active_sleeping(self) -> bool:
+        selected = current_pet(self.state)
+        return bool(selected.get("sleeping", False)) if isinstance(selected, dict) else self.state.sleeping
+
+    def active_roaming(self) -> bool:
+        selected = current_pet(self.state)
+        return bool(selected.get("roaming", True)) if isinstance(selected, dict) else self.state.roaming
+
+    def bring_selected_pet_to_desktop(self, pet_id: str) -> bool:
+        """Summon a care-console selection without altering founder's stats or sprite."""
         self.persist()
+        if pet_id == FOUNDER and not self.state.egg_hatched:
+            if self.console:
+                self.console.tip.setText("Hatch your Founder egg first.")
+            return False
+        try:
+            chosen = bring_to_desktop(self.state, pet_id)
+        except ValueError:
+            if self.console:
+                self.console.tip.setText("That pet has not hatched yet.")
+            return False
+        self.going_home = False
+        self.home_steps = 0
+        self.cuddle_mode = False
+        self.cuddle_taps = 0
+        self.bubble_text = ""
+        geom = QApplication.primaryScreen().availableGeometry()
+        px = chosen.get("desktop_x", -1) if isinstance(chosen, dict) else self.state.x
+        py = chosen.get("desktop_y", -1) if isinstance(chosen, dict) else self.state.y
+        if not isinstance(px, int) or px < 0:
+            px = self.portal.x() - 55
+        if not isinstance(py, int) or py < 0:
+            py = self.portal.y()
+        px = max(geom.left(), min(px, geom.right() - self.width() + 1))
+        py = max(geom.top(), min(py, geom.bottom() - self.height() + 1))
+        self.move(px, py)
+        self.show()
+        self.raise_()
+        name = chosen.get("name", "Buddy") if isinstance(chosen, dict) else self.state.name
+        self.say(f"{name} is here! ♡")
+        self.persist()
+        if self.house_dialog and self.house_dialog.isVisible():
+            self.house_dialog.refresh()
+        if self.console:
+            self.console.refresh()
+        return True
+
+    def return_from_house(self) -> None:
+        chosen = self.console.selected_id if self.console else FOUNDER
+        self.bring_selected_pet_to_desktop(chosen)
 
     def send_home(self) -> None:
-        if self.state.egg_hatched and self.state.location == "desktop":
+        if current_pet(self.state) is not False:
             self.going_home = True
             self.home_steps = 0
-            self.state.roaming = True
             self.say("Going home! ♡")
 
     def tap_egg(self) -> None:
@@ -828,7 +908,8 @@ class RoamingPet(QWidget):
 
     def animate(self) -> None:
         self.frame += 1
-        if self.going_home and self.state.location == "desktop":
+        active = current_pet(self.state)
+        if self.going_home and active is not False:
             # The target must be reachable by the WHOLE pet window. Near the
             # taskbar/screen edge the window manager can clamp moves, so aiming
             # at the portal's top-left would leave the pet stuck outside.
@@ -846,9 +927,10 @@ class RoamingPet(QWidget):
                     abs(dx) <= 16 and abs(dy) <= 16) or self.home_steps > 500:
                 self.going_home = False
                 self.home_steps = 0
-                self.state.location = "house"
-                self.hide()
                 self.persist()
+                send_desktop_pet_home(self.state)
+                self.hide()
+                self.state.save()
                 if self.house_dialog and self.house_dialog.isVisible():
                     self.house_dialog.refresh()
             else:
@@ -856,7 +938,10 @@ class RoamingPet(QWidget):
                 self.move(self.x() + max(-3, min(3, dx)), self.y() + max(-3, min(3, dy)))
             self.update()
             return
-        if self.state.roaming and not self.state.sleeping and not self.dragging:
+        if active is False:
+            self.update()
+            return
+        if self.active_roaming() and not self.active_sleeping() and not self.dragging:
             if self.idle_ticks > 0:
                 self.idle_ticks -= 1
             else:
@@ -869,7 +954,7 @@ class RoamingPet(QWidget):
                     self.move(next_x, self.y())
                     if random.random() < 0.004:
                         self.idle_ticks = random.randint(18, 70)
-                    if self.state.egg_hatched and random.random() < .00018:
+                    if random.random() < .00018:
                         self.send_home()
         self.update()
 
@@ -883,12 +968,18 @@ class RoamingPet(QWidget):
             self.console.refresh()
 
     def persist(self) -> None:
-        self.state.x, self.state.y = self.x(), self.y()
+        selected = current_pet(self.state)
+        if isinstance(selected, dict):
+            selected["desktop_x"], selected["desktop_y"] = self.x(), self.y()
+        elif selected is None:
+            self.state.x, self.state.y = self.x(), self.y()
         self.state.save()
 
     def open_console(self) -> None:
         if self.console is None:
             self.console = CareConsole(self)
+        if current_pet(self.state) is not False:
+            self.console.selected_id = self.state.desktop_pet_id
         self.console.refresh()
         self.console.show()
         self.console.raise_()
@@ -925,7 +1016,11 @@ class RoamingPet(QWidget):
             self.console.refresh()
 
     def toggle_roaming(self) -> None:
-        self.state.roaming = not self.state.roaming
+        selected = current_pet(self.state)
+        if isinstance(selected, dict):
+            selected["roaming"] = not selected.get("roaming", True)
+        elif selected is None:
+            self.state.roaming = not self.state.roaming
         self.persist()
         if self.console:
             self.console.refresh()
@@ -986,7 +1081,7 @@ def main() -> None:
     app.setQuitOnLastWindowClosed(False)
     state = PetState.load()
     pet = RoamingPet(state)
-    if state.location == "desktop":
+    if current_pet(state) is not False:
         pet.show()
     app.aboutToQuit.connect(pet.persist)
     sys.exit(app.exec())
