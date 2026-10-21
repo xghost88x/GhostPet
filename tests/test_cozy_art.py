@@ -76,10 +76,12 @@ class SpriteAndArtTests(unittest.TestCase):
                     changed += first.pixel(x,y) != second.pixel(x,y)
             return changed / total
 
-        self.assertGreater(difference(rendered[0],rendered[1]), .09,
-                           "Open Plan must be visibly different from Woodland")
-        self.assertGreater(difference(rendered[1],rendered[2]), .12,
-                           "Sunny Garden must be visibly different from Open Plan")
+        # Intentional minimum coverage far above the old recolor-pass bars:
+        # nearly half the canvas should change when buying a new floor plan.
+        self.assertGreater(difference(rendered[0],rendered[1]), .43,
+                           "Open Plan must show a dramatically different interior")
+        self.assertGreater(difference(rendered[1],rendered[2]), .43,
+                           "Garden must show a dramatically different conservatory")
 
     def test_desktop_cat_is_smaller_than_cottage_portal(self):
         img = QImage(124, 116, QImage.Format.Format_ARGB32)
