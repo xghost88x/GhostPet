@@ -1,8 +1,18 @@
-# GhostPet v0.6.1 Preview — Cozy Cottage, Pet Summoning & Update Fix
+# GhostPet v0.6.2 Preview — Furnished Cottage, Real Cat Sprite & Testing Coins
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.6.2
+
+**A visibly furnished cottage:** We replaced the plain block-wall appearance with seamless plaster partitions and painted original multi-tile bedroom, living-room, kitchen and nursery furniture. There is a large patchwork quilt and pillows, a three-seat sage couch, a round tea table, cabinetry, dining nook, plush nursery and little decorations. The Sunny Garden layout replaces the nursery decorations with a conservatory bench and planters. Built-in large furnishings block pets' walking paths and avoid doorway cells; your existing purchased furniture and layout saves are retained.
+
+**The cat is actually a cat:** The adopted Cat desktop sprite is now independent of the generic species body. It has distinctly triangular pink-lined ears, orange tabby stripes, rounded cheeks, symmetrical whiskers, little paws, and a curled upright tail. The miniature house cat also uses that drawing. The beloved Founder mouse sprite is untouched.
+
+**600 free testing coins (once):** Open the House and click **🎁 Claim 600 preview coins** above the canvas. The button appears only until used. Both existing floor-plan unlocks cost 120 + 260 = 380 coins, leaving 220 coins for experimenting with furniture. Your regular coin income from minigames is unchanged; the one-time claim persists in your save.
+
+This is still a code-drawn 2D cottage preview. We aren't claiming it already matches a professionally hand-painted pixel-art reference, but rooms now have distinctive larger furniture rather than color-only scenery. Update through the fixed v0.6.1 **↻ Update** button.
 
 ## What's new in v0.6.1
 
