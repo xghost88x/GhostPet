@@ -1,8 +1,14 @@
-# GhostPet v0.6 Preview — Cozy Cottage & Pet Summoning
+# GhostPet v0.6.1 Preview — Cozy Cottage, Pet Summoning & Update Fix
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.6.1
+
+**Updater reliability fix:** The Update Center now runs downloads in an isolated child process, shows progress stages and elapsed time, supports cancelling the download before installation, and times out stalled requests rather than leaving “Getting the latest version” forever. On failure it shows the error and allows Retry. During actual file installation, cancel is disabled to avoid corrupting the app.
+
+**If you're stuck on an older updater:** Close/force-close only the old Update Center, download the latest main-branch ZIP, unzip to Downloads, and run `bash install.sh` in the extracted `GhostPet-main` folder. This overwrites installed application files but does *not* touch `~/.local/share/ghostpet/state.json`. Afterwards, in-app updates use the fixed Update Center.
 
 ## What's new in v0.6
 
