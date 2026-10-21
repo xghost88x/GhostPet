@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.6.3-preview — Cottage Fit, Layout Unlock UI & Cuddles
+
+- Scale the cottage automatically to fit the available Zorin display and coordinate-match mouse clicks to the zoom factor.
+- Scale the four large furnished room compositions to 82% and clip furnishings to the house interior.
+- Relocate layout unlock status messages above the canvas so purchase failures are immediately visible.
+- GUI-test the actual Open Plan and Sunny Garden unlock buttons, coin deductions and free switching back to owned layouts.
+- Restore the missing **♡ Cuddle** Pocket Care button and five-pat cuddle mode for Founder and adopted companions.
+- Keep adopted pet affection and cuddle totals separate from the Founder, preserving all save data.
+- Validate cuddle mode, layout purchase, and offscreen scene rendering in automated tests.
+
+
 ## v0.6.2-preview — Furnished Woodland Cottage & Cat Sprite
 
 - Replace block-looking wall seams with joined plaster trim and wood-edged doors.
