@@ -1,8 +1,18 @@
-# GhostPet v0.7.2 Preview — Autonomous Antics & Refillable Food Bowls
+# GhostPet v0.7.3 Preview — Mouse-Pointer Chase
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.7.3
+
+**🐭 The pets chase your other mouse pointer!** Both desktop pets, including the Founder mouse, can occasionally notice and scamper after the real mouse pointer. The cat is weighted four times as likely as the other species to start a chase. It lasts a maximum of **8 seconds**, and spontaneous chases wait at least **75 seconds** since the previous one before randomly starting again. When chasing, their drawn bodies bounce in excitement. The computer's actual mouse pointer is **never moved, clicked, intercepted intentionally, or otherwise controlled**.
+
+**Keep your cursor accessible:** Chase navigation leaves at least a 30px horizontal gap outside the full pet window when selecting a destination and clamps pet movement to the available monitor area. Pet movement never deliberately targets the position *under* the cursor. If you start caring for the pet, drag it, open the house or put it to sleep, the chase ends safely. Like other always-on-top desktop pets, a pet can still momentarily overlap the pointer if you move the pointer directly over it; this is an experimental Qt behavior and screen/window manager support varies.
+
+**Your choice of mischief level:** Pocket Care's collapsible details include **🐾 Chase Pointer** for the selected desktop pet and **🐭 Cursor antics: On/Off** for spontaneous chases. Automatic antics are enabled by default, separately from the two-pet Auto interactions option. Clicking the manual button temporarily hides Pocket Care to leave the desktop clear. Both the lead pet and the second buddy also have a right-click **Chase pointer** action. A successful completed chase adds +2 happiness to the chaser, never consumes coins, and never changes the other pet's stats. The preference is saved across relaunches.
+
+**Existing features stay intact:** Both companions, cuddle mode, 8 duo social actions, friendship meters, the refillable house food bowl and all three distinct cottages remain unchanged. Original petite Founder mouse pixel art is preserved. Added headless GUI tests for desktop edges, chase completion, sleeping and returning-home cancellation, companion-only chases, toggle persistence and not interfering with duo interactions.
 
 ## What's new in v0.7.2
 
