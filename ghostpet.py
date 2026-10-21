@@ -6,15 +6,16 @@ Requires PySide6. Designed for GNOME/X11 (or XWayland) on Zorin OS.
 
 from __future__ import annotations
 
-import fcntl
 import json
 import math
 import os
 import random
 import subprocess
 import sys
+import tempfile
+import shutil
 import time
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, fields, field
 from pathlib import Path
 
 from PySide6.QtCore import QPoint, Qt, QTimer
@@ -386,7 +387,14 @@ except ModuleNotFoundError as exc:
         painter.restore()
 
 APP_NAME = "GhostPet"
-DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "ghostpet"
+WINDOWS_BETA = sys.platform == "win32"
+if WINDOWS_BETA:
+    # Windows saves are per-user and NOT part of the extracted executable.
+    DATA_DIR = Path(os.environ.get(
+        "LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "GhostPet"
+else:
+    DATA_DIR = Path(os.environ.get(
+        "XDG_DATA_HOME", Path.home() / ".local/share")) / "ghostpet"
 STATE_FILE = DATA_DIR / "state.json"
 
 PALETTES = {
@@ -454,7 +462,9 @@ class PetState:
     mischief: int = 0
     cuddles: int = 0
     words_learned: int = 0
-    coins: int = 200
+    # Clean Windows testers get 600 coins exactly once at first creation.
+    # Existing Linux players and all loaded saves retain their balances.
+    coins: int = field(default_factory=lambda: 600 if WINDOWS_BETA else 200)
     furniture: list | None = None
     owned_furniture: list | None = None
     house_version: int = 1
@@ -475,7 +485,8 @@ class PetState:
     desktop_pet_id: str = "founder"
     desktop_companion_id: str = "none"
     relationships: dict | None = None
-    preview_coins_claimed: bool = False
+    # Avoid handing Windows beta testers an additional 600-coin preview gift.
+    preview_coins_claimed: bool = field(default_factory=lambda: WINDOWS_BETA)
     last_bowl_meal: float = 0.0
     auto_social: bool = True
     auto_cursor_chase: bool = True
@@ -1878,7 +1889,30 @@ class RoamingPet(QWidget):
         self.update()
 
     def open_updater(self) -> None:
-        """Open the separate graphical updater, then exit cleanly for safe patching."""
+        """Launch updater outside this process so the app binary can be patched."""
+        if WINDOWS_BETA:
+            # Copy the updater EXE to a temporary folder: Windows otherwise
+            # locks that EXE and prevents an updater refresh during install.
+            app_path = Path(sys.executable).resolve()
+            installed = app_path.with_name("GhostPetUpdater.exe")
+            if not installed.is_file():
+                QMessageBox.warning(self, "Updater missing",
+                    "Reinstall the Windows tester ZIP to restore GhostPetUpdater.exe.")
+                return
+            try:
+                tmpdir = Path(tempfile.mkdtemp(prefix="GhostPetUpdater-"))
+                runner = tmpdir / installed.name
+                shutil.copy2(installed, runner)
+                self.persist()
+                subprocess.Popen(
+                    [str(runner), "--app-dir", str(app_path.parent),
+                     "--wait-pid", str(os.getpid())],
+                    cwd=str(app_path.parent), close_fds=True)
+            except OSError as exc:
+                QMessageBox.warning(self, "Could not start updater", str(exc))
+                return
+            QApplication.instance().quit()
+            return
         launcher = Path(__file__).resolve().with_name("update.sh")
         if not launcher.is_file():
             QMessageBox.warning(self, "Updater missing",
@@ -2242,12 +2276,22 @@ class RoamingPet(QWidget):
 
 
 def claim_single_instance_lock():
-    """Prevent two desktop pets from loading and writing the same save at once."""
+    """Cross-platform exclusive lock on one user's household save."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    handle = (DATA_DIR / ".ghostpet-running.lock").open("a+")
+    handle = (DATA_DIR / ".ghostpet-running.lock").open("a+b")
     try:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
+        if WINDOWS_BETA:
+            import msvcrt
+            if not handle.read(1):
+                handle.seek(0)
+                handle.write(b"0")
+                handle.flush()
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (OSError, BlockingIOError):
         handle.close()
         return None
     return handle
