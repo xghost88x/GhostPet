@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
 )
 
 from activities import GameDialog, pick_speech
-from house import HouseDialog
+from house import HouseDialog, house_feed_cycle
 from nursery import NurseryDialog
 # v0.5.4 updater did not know about additional Python modules. Each module
 # has a fallback so an old one-click updater can still launch v0.6 safely.
@@ -446,6 +446,7 @@ class PetState:
     desktop_companion_id: str = "none"
     relationships: dict | None = None
     preview_coins_claimed: bool = False
+    last_bowl_meal: float = 0.0
 
     @classmethod
     def load(cls) -> "PetState":
@@ -1740,6 +1741,10 @@ class RoamingPet(QWidget):
 
     def update_needs(self) -> None:
         self.state.advance()
+        if not (self.house_dialog and self.house_dialog.isVisible()):
+            # Real household feeding continues while the cottage window is closed.
+            # Only placed, stocked bowls can feed pets that are actually indoors.
+            house_feed_cycle(self.state, require_near=False)
         if self.state.location == "house" and self.state.egg_hatched:
             self.state.energy = clamp(self.state.energy + .25)
             self.state.happiness = clamp(self.state.happiness + .1)
