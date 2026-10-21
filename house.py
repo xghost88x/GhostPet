@@ -629,6 +629,20 @@ class HouseCanvas(QWidget):
     def draw_furniture(self, p, px, py, item):
         if item in ITEMS:
             cottage_item(p, px, py, item, ITEMS[item][2])
+            if item == "bowl":
+                entry = next((f for f in self.dialog.state.furniture
+                              if f.get("item")=="bowl" and
+                              self.dialog.entry_tile(f)==(px//TILE,py//TILE)),None)
+                portions = entry.get("servings",BOWL_CAPACITY) if entry else 0
+                # Filled bowls have visible kibble; empty ones are visibly bare.
+                p.fillRect(px+10,py+16,12,5,QColor("#cdbdb0"))
+                if portions:
+                    for i in range(min(int(portions),6)):
+                        p.fillRect(px+10+(i%3)*4,py+16+(i//3)*3,3,2,
+                                   QColor("#96714d"))
+                p.setPen(QColor("#fcf0ce"))
+                p.setFont(QFont("Sans",8,QFont.Weight.Bold))
+                p.drawText(px+8,py+12,str(portions))
 
     def draw_housemate(self, p, pet):
         """Small, species-specific pixel silhouettes for nursery pets."""
@@ -717,6 +731,7 @@ class HouseDialog(QDialog):
         self.idle_ticks = 0
         self.friend_heart_until = 0.0
         self.last_house_bond = 0.0
+        self.last_bowl_tick = 0.0
         if not self.state.housewarming_granted:
             self.state.coins = max(200, self.state.coins)
             self.state.housewarming_granted = True
@@ -783,6 +798,14 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.status.setWordWrap(True)
         self.status.setMinimumHeight(24)
         body.addWidget(self.status)
+        bowl_row = QHBoxLayout()
+        self.bowl_status = QLabel("🥣 Food bowls: none placed")
+        self.bowl_status.setWordWrap(True)
+        bowl_row.addWidget(self.bowl_status,1)
+        self.refill_button = QPushButton("🥣 Refill bowls")
+        self.refill_button.clicked.connect(self.refill_bowls)
+        bowl_row.addWidget(self.refill_button)
+        body.addLayout(bowl_row)
         friend_row = QHBoxLayout()
         friend_row.addWidget(QLabel("♡ Pet friendships:"))
         self.friend_selector = QComboBox()
@@ -831,6 +854,36 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
                 changed += 1
             occupied.add(target)
         return changed
+
+    def refill_bowls(self):
+        count = refill_house_bowls(self.state)
+        if not count:
+            self.status.setText("Decorate mode → choose Food bowl (8 coins) and place it first.")
+            return
+        self.save()
+        self.status.setText(f"🥣 Refilled {count} bowl(s) with {BOWL_CAPACITY} servings each!")
+        self.refresh()
+
+    def food_bowl_nearby(self, pet_pos):
+        bowls = [b for b in house_bowls(self.state) if b["servings"] > 0]
+        if not bowls:
+            return None
+        return min(bowls,key=lambda e: abs(e["cell"]%W-pet_pos[0])+
+                   abs(e["cell"]//W-pet_pos[1]))
+
+    def feeding_target(self, pos):
+        bowl = self.food_bowl_nearby(pos)
+        if not bowl:
+            return []
+        tile = self.entry_tile(bowl)
+        blocked = self.blocked()
+        targets = [(tile[0]+dx,tile[1]+dy) for dx,dy in
+                   ((1,0),(-1,0),(0,1),(0,-1))]
+        routes = [path_between(pos,t,blocked,self.wall_tiles())
+                  for t in targets if t not in blocked
+                  and t not in self.wall_tiles()]
+        reachable = [r for r in routes if r or pos in targets]
+        return min(reachable,key=len) if reachable else []
 
     def claim_preview_coins(self):
         """One-time preview gift; no save-file editing or repeat farming."""
@@ -990,6 +1043,12 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         # One authoritative two-slot roster, regardless of stale saved flags.
         sync_locations(self.state)
         self.balance.setText(f"🪙 {self.state.coins}")
+        bowls = house_bowls(self.state)
+        remaining = sum(b["servings"] for b in bowls)
+        self.bowl_status.setText(
+            f"🥣 {remaining}/{len(bowls)*BOWL_CAPACITY} portions"
+            if bowls else "🥣 No food bowl placed yet")
+        self.refill_button.setEnabled(bool(bowls))
         previous = self.friend_selector.currentData()
         pairs = relationship_pairs(self.state)
         self.friend_selector.blockSignals(True)
@@ -1024,6 +1083,14 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         if self.mode == "Decorate":
             self.place_item(tile)
             return
+        bowl = next((e for e in house_bowls(self.state)
+                     if self.entry_tile(e)==tile),None)
+        if bowl:
+            bowl["servings"] = BOWL_CAPACITY
+            self.status.setText(f"🥣 Bowl topped up to {BOWL_CAPACITY} portions. Hungry pets eat nearby!")
+            self.save()
+            self.refresh()
+            return
         route = path_between(self.position, tile, self.blocked(), self.wall_tiles())
         if route or tile == self.position:
             self.path = route
@@ -1052,7 +1119,10 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
                 return
             self.state.coins -= cost
             self.state.owned_furniture.append(key)
-        self.state.furniture.append({"cell": tile[1] * W + tile[0], "item": key})
+        self.state.furniture.append({
+            "cell": tile[1]*W+tile[0], "item": key,
+            **({"servings":BOWL_CAPACITY} if key=="bowl" else {}),
+        })
         self.path = []
         self.save()
         self.status.setText(f"Placed {ITEMS[key][0]}! Unlocked items are free to rearrange.")
