@@ -676,7 +676,7 @@ class HouseDialog(QDialog):
                 changed = True
         if changed:
             self.save()
-        self.setWindowTitle(f"GhostPet • {LAYOUTS[self.state.house_layout][0]} • v0.6.4")
+        self.setWindowTitle(f"GhostPet • {LAYOUTS[self.state.house_layout][0]} • v0.7.0")
         self.setStyleSheet("""QDialog{background:#f1e4d2;color:#443e31}
 QLabel{color:#443e31;font-size:13px}
 QPushButton,QComboBox{background:#759278;color:white;border:1px solid #55735b;
@@ -771,12 +771,31 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         if key not in LAYOUTS or key == self.state.house_layout:
             return
         new_walls = walls_for_layout(key)
-        # Switching back to a more divided home never deletes belongings.
-        hidden = [entry for entry in self.state.furniture
-                  if self.entry_tile(entry) in new_walls]
-        if hidden:
-            self.status.setText("Move furniture out of the future walls before changing plans.")
-            return
+        # Floor plans really rearrange partitions now. Preserve every purchased
+        # furnishing and move only pieces that collide with new built-ins/walls.
+        reserved = set(new_walls) | set(built_in_occupied(key))
+        furniture_cells = set()
+        moves = []
+        for entry in self.state.furniture:
+            old_tile = self.entry_tile(entry)
+            if old_tile is None:
+                continue  # Keep any legacy/unknown furniture entry intact.
+            ok = (1 <= old_tile[0] < W-1 and 1 <= old_tile[1] < H-1
+                  and old_tile not in reserved and old_tile not in furniture_cells)
+            if ok:
+                target = old_tile
+            else:
+                candidates = [(x,y) for y in range(1,H-1)
+                              for x in range(1,W-1)
+                              if (x,y) not in reserved
+                              and (x,y) not in furniture_cells]
+                if not candidates:
+                    self.status.setText("No free tile for all your furniture in this plan.")
+                    return
+                target = min(candidates, key=lambda cell:
+                             abs(cell[0]-old_tile[0])+abs(cell[1]-old_tile[1]))
+            furniture_cells.add(target)
+            moves.append((entry,target))
         if key not in self.state.unlocked_house_layouts:
             if key == "garden" and "open" not in self.state.unlocked_house_layouts:
                 self.status.setText("Unlock the Open Plan Cottage first.")
@@ -788,7 +807,12 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
             self.state.coins -= cost
             self.state.unlocked_house_layouts.append(key)
         self.state.house_layout = key
-        self.setWindowTitle(f"GhostPet • {LAYOUTS[key][0]} • v0.6.4")
+        relocated = 0
+        for entry, target in moves:
+            if self.entry_tile(entry) != target:
+                relocated += 1
+                entry["cell"] = target[1]*W + target[0]
+        self.setWindowTitle(f"GhostPet • {LAYOUTS[key][0]} • v0.7.0")
         self.position = self.safe_position(self.position, new_walls)
         self.state.house_pet_x, self.state.house_pet_y = self.position
         for pet in self.state.adopted_pets or []:
@@ -804,7 +828,10 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
             self.layout_selector.addItem(label + suffix, item_key)
         self.layout_selector.setCurrentIndex(list(LAYOUTS).index(key))
         self.layout_selector.blockSignals(False)
-        self.status.setText(f"Welcome to your {LAYOUTS[key][0]}! Your pets and furnishings are safe.")
+        self.status.setText(
+            f"Welcome to your {LAYOUTS[key][0]}! "
+            + (f"Safely rearranged {relocated} furniture piece(s)." if relocated else
+               "Your furniture and pets are safe."))
         self.refresh()
 
     def safe_position(self, tile, new_walls):
