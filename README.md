@@ -1,8 +1,14 @@
-# GhostPet v0.7.3 Preview — Mouse-Pointer Chase
+# GhostPet v0.7.4 Preview — Mouse-Pointer Catch
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.7.4
+
+**Now the cat can actually catch it!** The pointer chase previously stayed 30 pixels away from the mouse pointer for click safety but never tested whether the pet had arrived. A successful virtual paw-pounce now happens **when a chasing pet reaches the safe target beside the pointer and the pointer stays mostly still for about 0.4 seconds**. The pointer is never moved or clicked and remains outside the pet's window. Successful catches show **✦ GOTCHA! ✦** above the catching pet, display a victory speech bubble, grant **+6 happiness** and **2 coins**, and end the chase so rewards happen only once. If you keep moving the cursor and the pet cannot catch it within eight seconds, the usual playful escape still happens with the existing +2 happiness reward. You can tease the cat, stop the pointer to let her win, or disable cursor antics in Pocket Care.
+
+Catching works for the cat as either the lead or second desktop buddy, and for the Founder mouse. Sleeping/dragging, opening care, sending a pet home or changing the pet roster still cancel ongoing chases safely. A new offscreen regression test verifies the correct reward, no double payments, a moving pointer evading the catch, and the safety gap remaining intact. Your existing pets, coins, cottage layouts, friendship and stocked food bowls are preserved.
 
 ## What's new in v0.7.3
 
