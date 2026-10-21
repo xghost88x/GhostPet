@@ -1,0 +1,71 @@
+name: Windows tester beta
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows-beta:
+    name: Build Windows tester EXEs
+    runs-on: windows-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+      - name: Install GUI and packaging dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller pillow
+      - name: Windows runtime and update safety tests
+        run: python -m unittest discover -s windows_tests -v
+      - name: Prepare the original GhostPet app icon
+        run: python windows_assets.py
+      - name: Bundle game executable
+        run: |
+          python -m PyInstaller --clean --noconfirm --onefile --windowed --name GhostPet --icon build_icons/ghostpet.ico --add-data "VERSION:." --add-data "assets/ghostpet.svg:assets" ghostpet.py
+      - name: Bundle independent updater executable
+        run: |
+          python -m PyInstaller --clean --noconfirm --onefile --windowed --name GhostPetUpdater --icon build_icons/ghostpet.ico windows_updater.py
+      - name: Package clean tester ZIP (no personal save files)
+        shell: pwsh
+        run: |
+          $dest = "package/GhostPet-Windows"
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Copy-Item "dist/GhostPet.exe" "$dest/GhostPet.exe"
+          Copy-Item "dist/GhostPetUpdater.exe" "$dest/GhostPetUpdater.exe"
+          Copy-Item "VERSION" "$dest/VERSION"
+          Copy-Item "README-Windows.txt" "$dest/README-Windows.txt"
+          Copy-Item "Install-Windows.cmd" "$dest/Install-Windows.cmd"
+          if (Test-Path "$dest/state.json") { throw "Private state must not be shipped." }
+          Compress-Archive -Path "$dest" -DestinationPath "GhostPet-Windows-Testers.zip" -Force
+          Write-Host "ZIP size:" (Get-Item "GhostPet-Windows-Testers.zip").Length
+      - name: Upload the built Windows ZIP as Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GhostPet-Windows-Testers
+          path: GhostPet-Windows-Testers.zip
+          if-no-files-found: error
+          retention-days: 60
+      - name: Publish public prerelease for the Windows updater
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $tag = "windows-beta-v$version"
+          gh release view $tag --json tagName *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag GhostPet-Windows-Testers.zip --clobber
+          } else {
+            gh release create $tag GhostPet-Windows-Testers.zip --target $env:GITHUB_SHA --prerelease --title "GhostPet Windows beta $version" --notes "Unsigned Windows 10/11 tester build. Download GhostPet-Windows-Testers.zip, extract, then run Install-Windows.cmd. Each new Windows save starts at 600 coins. Use Pocket Care > Update to install newer Windows beta releases without losing your pets. This is a public test build, not a polished final release."
+          }
