@@ -36,6 +36,13 @@ class GhostPetGuiSmokeTests(unittest.TestCase):
                 self.assertTrue(pet.isVisible())
 
                 pet.open_house()
+                balance = state.coins
+                pet.house_dialog.claim_preview_coins()
+                self.assertEqual(state.coins, balance + 600)
+                self.assertTrue(state.preview_coins_claimed)
+                pet.house_dialog.claim_preview_coins()
+                self.assertEqual(state.coins, balance + 600,
+                                 "Preview gift must only be claimable once")
                 image = QImage(W*TILE,H*TILE,QImage.Format.Format_ARGB32)
                 image.fill(0)
                 pet.house_dialog.canvas.render(image)
