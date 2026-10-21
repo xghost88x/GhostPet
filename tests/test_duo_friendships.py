@@ -64,6 +64,7 @@ class DuoFriendshipTests(unittest.TestCase):
         repair_presence(state)
         roaming=RoamingPet(state)
         try:
+            roaming.show()  # main() does this in normal desktop launches.
             roaming.open_console()
             roaming.console.selector.setCurrentIndex(1)
             roaming.console.buddy_button.click()
@@ -78,6 +79,14 @@ class DuoFriendshipTests(unittest.TestCase):
             roaming.console.buddy_button.click()
             self.assertEqual(state.desktop_companion_id,"none")
             self.assertFalse(roaming.buddy.isVisible())
+            roaming.invite_selected_buddy("cat1")
+            self.assertEqual(state.desktop_companion_id,"cat1")
+            roaming.send_home()
+            self.assertEqual(state.desktop_pet_id,"cat1")
+            self.assertEqual(state.desktop_companion_id,"none")
+            self.assertTrue(roaming.isVisible())
+            self.assertFalse(roaming.buddy.isVisible())
+            self.assertEqual(state.location,"house")
         finally:
             if roaming.house_dialog:roaming.house_dialog.close()
             if roaming.console:roaming.console.close()
