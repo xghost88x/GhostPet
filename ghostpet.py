@@ -113,6 +113,105 @@ except ModuleNotFoundError as exc:
         state.desktop_pet_id = NONE
         return pet_id
 
+    # Compatibility for upgrading straight from the old 0.5.x launchers.
+    from itertools import combinations
+
+    def active_desktop_ids(state):
+        first = getattr(state, "desktop_pet_id", NONE)
+        second = getattr(state, "desktop_companion_id", NONE)
+        return [p for p in (first, second) if p != NONE and
+                (p == FOUNDER or find_adopted(state,p) is not None)]
+
+    def sync_locations(state):
+        active = active_desktop_ids(state)
+        state.location = "desktop" if FOUNDER in active else "house"
+        for p in (state.adopted_pets or []):
+            p["location"] = "desktop" if p.get("id") in active else "house"
+        return active
+
+    def invite_companion(state, pet_id):
+        if pet_id != FOUNDER and not find_adopted(state,pet_id):
+            raise ValueError("Unknown companion.")
+        if state.desktop_pet_id == NONE:
+            bring_to_desktop(state,pet_id)
+            return False
+        if pet_id == state.desktop_pet_id:
+            return False
+        state.desktop_companion_id = pet_id
+        sync_locations(state)
+        return True
+
+    def send_companion_home(state):
+        state.desktop_companion_id = NONE
+        sync_locations(state)
+
+    def repair_presence(state):
+        first = getattr(state,"desktop_pet_id", FOUNDER)
+        second = getattr(state,"desktop_companion_id", NONE)
+        if first != NONE and first != FOUNDER and not find_adopted(state,first):
+            first = FOUNDER if state.location == "desktop" else NONE
+        if first == FOUNDER and state.location != "desktop" and second == NONE:
+            first = NONE
+        if second == first or (second != NONE and second != FOUNDER and
+                              not find_adopted(state,second)):
+            second = NONE
+        state.desktop_pet_id = first
+        state.desktop_companion_id = second
+        if not isinstance(getattr(state,"relationships",None), dict):
+            state.relationships = {}
+        sync_locations(state)
+        return first
+
+    def bring_to_desktop(state, pet_id):
+        if pet_id != FOUNDER and not find_adopted(state,pet_id):
+            raise ValueError("Unknown companion.")
+        if pet_id == state.desktop_companion_id:
+            state.desktop_companion_id = state.desktop_pet_id
+        state.desktop_pet_id = pet_id
+        sync_locations(state)
+        return None if pet_id == FOUNDER else find_adopted(state,pet_id)
+
+    def send_desktop_pet_home(state):
+        old = state.desktop_pet_id
+        state.desktop_pet_id = state.desktop_companion_id
+        state.desktop_companion_id = NONE
+        sync_locations(state)
+        return old
+
+    def pet_name(state, pet_id):
+        p = find_adopted(state,pet_id)
+        return state.name if pet_id == FOUNDER else (p.get("name","Buddy") if p else "Buddy")
+
+    def relationship_pairs(state):
+        ids = [FOUNDER]+[p.get("id") for p in state.adopted_pets or []]
+        return list(combinations(ids,2))
+
+    def _pair_key(a,b):
+        if a==b:
+            raise ValueError("Two different pets required.")
+        return "|".join(sorted((a,b)))
+
+    def relationship_score(state,a,b):
+        rel = state.relationships if isinstance(state.relationships,dict) else {}
+        return max(0,min(100,float(rel.get(_pair_key(a,b),30))))
+
+    def strengthen_friendship(state,a,b,points=1.0):
+        if not isinstance(state.relationships,dict):
+            state.relationships = {}
+        score = round(min(100,relationship_score(state,a,b)+points),2)
+        state.relationships[_pair_key(a,b)] = score
+        return score
+
+    def advance_house_friendships(state,hours):
+        indoors = [p for p in [FOUNDER]+[x.get("id") for x in state.adopted_pets or []]
+                   if p not in active_desktop_ids(state)]
+        for a,b in combinations(indoors,2):
+            strengthen_friendship(state,a,b,min(max(hours,0),24)*.24)
+
+    def relationship_title(score):
+        return ("Best buddies" if score>=85 else "Good friends" if score>=60 else
+                "Getting closer" if score>=35 else "Acquaintances")
+
 try:
     from adopted_sprites import draw_adopted_pet
 except ModuleNotFoundError as exc:
