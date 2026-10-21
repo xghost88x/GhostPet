@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.5-preview — Two Pets & Persistent Friendship
+
+- Add a second desktop pet window, with the same clickable care access, drag behavior, and independent saved desktop coordinates as the lead pet.
+- Add **Invite as Second Pet** and **Send Buddy Home** controls inside Pocket Care, with no more than two active desktop pets.
+- Let desktop pets wander together, greet, and produce heart reactions as their shared relationship improves.
+- Add per-pair relationship values, capped at 100, separate from each pet's own individual affection score.
+- Add selectable friendship meters in Pocket Care and directly above the house canvas, even when a pair is indoors.
+- Allow relationships to increase when indoor pets meet and passively over real elapsed time while both are inside, including when the house window is closed.
+- Make the two-slot desktop roster authoritative, preserve single-pet saves and all Founder/nursery/furniture progress, and avoid duplicate indoor/outdoor renderings.
+- Expand GUI and persistence regression tests for duo invitations, dismissal, promotion, and indoor relationship growth.
+
+
 ## v0.6.4-preview — Distinct Home Upgrades & No Duplicate Cats
 
 - Scale desktop Cat art to 2× and other adopted sprites to 3×, retaining the Founder mouse at its approved size.
