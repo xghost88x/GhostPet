@@ -1,4 +1,4 @@
-# GhostPet v0.7.4 Preview — Mouse-Pointer Catch
+# GhostPet v0.8.0 Beta — Windows Tester Candidate
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
