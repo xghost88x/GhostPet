@@ -875,6 +875,12 @@ class DesktopBuddy(QWidget):
             draw_adopted_pet(painter, self.width(), self.height(), record,
                              self.frame, scale=scale, facing=self.facing)
         painter.restore()
+        if (self.lead.cursor_catch_pet_id == pet_id and
+                time.monotonic() < self.lead.cursor_catch_until):
+            painter.setPen(QColor("#b95481"))
+            painter.setFont(QFont("Sans", 10, QFont.Weight.Bold))
+            painter.drawText(10, 16, "✦ GOTCHA! ✦")
+            painter.drawText(90, 59, "✦")
         kind = self.lead.pair_interaction
         if self.lead.friend_heart_until > time.monotonic():
             painter.setPen(QColor("#ea829f"))
@@ -1456,6 +1462,12 @@ class RoamingPet(QWidget):
             draw_pet(painter, self.width(), self.height(), self.state,
                      self.frame, scale=4, facing=self.facing)
         painter.restore()
+        if (self.cursor_catch_pet_id == self.state.desktop_pet_id and
+                time.monotonic() < self.cursor_catch_until):
+            painter.setPen(QColor("#b95481"))
+            painter.setFont(QFont("Sans", 10, QFont.Weight.Bold))
+            painter.drawText(10, 16, "✦ GOTCHA! ✦")
+            painter.drawText(90, 59, "✦")
         if self.cursor_chaser_id == self.state.desktop_pet_id:
             painter.setFont(QFont("Sans",15,QFont.Weight.Bold))
             painter.setPen(QColor("#bf85a4"))
