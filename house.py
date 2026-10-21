@@ -497,7 +497,7 @@ class HouseDialog(QDialog):
                 changed = True
         if changed:
             self.save()
-        self.setWindowTitle("GhostPet • Furnished Woodland Cottage v0.6.2")
+        self.setWindowTitle(f"GhostPet • {LAYOUTS[self.state.house_layout][0]} • v0.6.4")
         self.setStyleSheet("""QDialog{background:#f1e4d2;color:#443e31}
 QLabel{color:#443e31;font-size:13px}
 QPushButton,QComboBox{background:#759278;color:white;border:1px solid #55735b;
@@ -597,6 +597,7 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
             self.state.coins -= cost
             self.state.unlocked_house_layouts.append(key)
         self.state.house_layout = key
+        self.setWindowTitle(f"GhostPet • {LAYOUTS[key][0]} • v0.6.4")
         self.position = self.safe_position(self.position, new_walls)
         self.state.house_pet_x, self.state.house_pet_y = self.position
         for pet in self.state.adopted_pets or []:
