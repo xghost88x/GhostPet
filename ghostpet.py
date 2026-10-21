@@ -1595,6 +1595,8 @@ class RoamingPet(QWidget):
         self.persist()
         if self.console and self.console.isVisible():
             self.console.refresh()
+        if self.house_dialog and self.house_dialog.isVisible():
+            self.house_dialog.update_friendship()
 
     def persist(self) -> None:
         if hasattr(self, "buddy"):
