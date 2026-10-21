@@ -161,18 +161,7 @@ except ModuleNotFoundError as exc:
         box(p,500,298,11,10,"#ecd29e")
         box(p,499,295,5,5,"#be8966")
         box(p,509,295,5,5,"#be8966")
-        # Small carved name plaques to replace large overlaid map captions.
-        names = {
-            "cottage": (("BEDROOM",48,59),("LIVING",320,54),("KITCHEN",40,207),("NURSERY",324,210)),
-            "open": (("BEDROOM",48,59),("OPEN LOUNGE",312,54),("KITCHEN",40,207),("NURSERY",324,210)),
-            "garden": (("BEDROOM",48,59),("SUNNY LOUNGE",309,54),("KITCHEN",40,207),("GARDEN",330,210)),
-        }
-        p.setFont(QFont("Sans",8,QFont.Weight.Bold))
-        for label,x,y in names.get(layout,names["cottage"]):
-            box(p,x-4,y-11,len(label)*7+10,17,"#e9d8b6")
-            box(p,x-2,y-9,len(label)*7+6,13,"#c0a27a")
-            p.setPen(QColor("#594a38"))
-            p.drawText(x,y+1,label)
+            # No room-name overlays. Layouts remain fully functional.
 
 
     def cottage_item(p, px, py, item, tint):
