@@ -43,7 +43,12 @@ from nursery import NurseryDialog
 # has a fallback so an old one-click updater can still launch v0.6 safely.
 try:
     from pet_presence import (FOUNDER, NONE, bring_to_desktop, current_pet,
-                              find_adopted, repair_presence, send_desktop_pet_home)
+                              find_adopted, repair_presence, send_desktop_pet_home,
+                              active_desktop_ids, sync_locations, invite_companion,
+                              send_companion_home, relationship_pairs,
+                              relationship_score, strengthen_friendship,
+                              advance_house_friendships, relationship_title,
+                              pet_name)
 except ModuleNotFoundError as exc:
     if exc.name != "pet_presence":
         raise
@@ -339,6 +344,8 @@ class PetState:
     house_layout: str = "cottage"
     unlocked_house_layouts: list | None = None
     desktop_pet_id: str = "founder"
+    desktop_companion_id: str = "none"
+    relationships: dict | None = None
     preview_coins_claimed: bool = False
 
     @classmethod
@@ -395,6 +402,8 @@ class PetState:
             self.happiness = clamp(self.happiness - elapsed_hours * 3.0)
             self.cleanliness = clamp(self.cleanliness - elapsed_hours * 3.5)
             self.energy = clamp(self.energy - elapsed_hours * 4.0)
+        # Indoor pair bonds grow even when the cottage window is closed.
+        advance_house_friendships(self, elapsed_hours)
         # Deliberately gentle: the pet never dies while you are away.
 
     @property
