@@ -4,7 +4,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import tempfile
 import unittest
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QImage, QPainter
+from PySide6.QtGui import QImage
 
 from ghostpet import PetState, RoamingPet
 from house import TILE, W, H
@@ -38,11 +38,7 @@ class GhostPetGuiSmokeTests(unittest.TestCase):
                 pet.open_house()
                 image = QImage(W*TILE,H*TILE,QImage.Format.Format_ARGB32)
                 image.fill(0)
-                painter = QPainter(image)
-                try:
-                    pet.house_dialog.canvas.render(painter)
-                finally:
-                    painter.end()
+                pet.house_dialog.canvas.render(image)
                 sampled = {
                     image.pixel(x,y)
                     for x in range(4, W*TILE, 9)
