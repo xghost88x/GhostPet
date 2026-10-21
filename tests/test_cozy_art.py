@@ -3,12 +3,18 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import unittest
 from PySide6.QtGui import QImage, QPainter
+from PySide6.QtWidgets import QApplication
 from adopted_sprites import draw_adopted_pet
 from cottage_art import built_in_occupied, pixel_cottage
 from house import TILE, W, H, walls_for_layout
 
 
 class SpriteAndArtTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # QFont inside room labels requires a live QApplication.
+        cls.app = QApplication.instance() or QApplication(["ghostpet-visual-tests"])
+
     def test_cat_has_full_silhouette_with_ears_tail_and_whisker_extents(self):
         img=QImage(124,116,QImage.Format.Format_ARGB32)
         img.fill(0)
