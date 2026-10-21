@@ -1,8 +1,18 @@
-# GhostPet v0.6.3 Preview — Cottage Fit, Working Unlocks & Cuddles
+# GhostPet v0.6.4 Preview — Properly Distinct Cottage Upgrades & Pet Scale
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.6.4
+
+**Cat now fits beside the little house:** The adopted desktop cat renders at 2× scale (56 pixels across), smaller than the 80-pixel cottage icon, while the beloved Founder mouse remains unchanged. Other adopted species use 3×.
+
+**No pet clones:** The House canvas uses the selected desktop pet ID as the authoritative location. A pet chosen for the desktop is never drawn in the house, even if its old `location` save field was stale. The house refresh also repairs those flags. Ghost Pet now takes an exclusive single-instance lock to prevent two game copies from updating the same save simultaneously.
+
+**Upgrades look different:** Woodland Cottage retains its four cozy rooms. Open Plan removes much more of the partitions, gains an expansive sage great-room floor and a breakfast island. Sunny Garden opens the remaining inner walls and adds a large glazed conservatory floor, hanging plants, garden benches and a water bowl. Window title shows the selected floor plan. Each version retains purchased items, pets and coins.
+
+The offscreen GUI test checks the actual pixels differ substantially between each layout, verifies the cat is smaller than the 80-pixel portal, and prevents rendering the active adopted cat indoors. Existing unlock prices and the 600 preview-coin reward remain.
 
 ## What's new in v0.6.3
 
