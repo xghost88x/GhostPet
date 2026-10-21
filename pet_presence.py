@@ -20,7 +20,7 @@ def find_adopted(state, pet_id):
 def repair_presence(state):
     """Migrate saved households without changing names, stats, positions or coins."""
     current = getattr(state, "desktop_pet_id", FOUNDER)
-    if current != FOUNDER and find_adopted(state, current) is None:
+    if current not in (FOUNDER, NONE) and find_adopted(state, current) is None:
         current = FOUNDER if state.location == "desktop" else NONE
     if current == FOUNDER and state.location != "desktop":
         current = NONE  # Founder deliberately indoors on an old save.
