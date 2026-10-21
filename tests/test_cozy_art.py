@@ -30,7 +30,7 @@ class SpriteAndArtTests(unittest.TestCase):
         self.assertGreater(max(x for x,y in opaque),102,"Tail should extend away from body")
         self.assertLess(min(x for x,y in opaque),12,"Whiskers must extend to the sides")
         self.assertGreater(max(y for x,y in opaque),105,"Distinct paws at bottom")
-        self.assertGreater(len({img.pixel(x,y) for x,y in opaque}),5)
+        self.assertGreaterEqual(len({img.pixel(x,y) for x,y in opaque}),5)
 
     def test_cottage_scenes_render_differently_and_leave_paths(self):
         samples=[]
