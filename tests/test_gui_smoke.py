@@ -7,13 +7,35 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QImage
 
 from ghostpet import PetState, RoamingPet
-from house import TILE, W, H
+from house import TILE, W, H, HouseDialog, walls_for_layout, built_in_occupied
 
 
 class GhostPetGuiSmokeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication(["ghostpet-smoke"])
+
+    def test_previous_version_furniture_survives_new_open_plan_walls(self):
+        # Version 0.6.5 saved this furniture before the full 0.7 rebuild.
+        state = PetState(
+            name="Mochi", founder=True, egg_hatched=True, house_version=2,
+            housewarming_granted=True, house_layout="open",
+            unlocked_house_layouts=["cottage","open"], coins=345,
+            furniture=[{"cell":2*W+6,"item":"plant"}],
+            owned_furniture=["bed","plant"], adopted_pets=[],
+        )
+        house = HouseDialog(state, lambda:None, lambda:None, lambda:None)
+        try:
+            self.assertEqual(state.house_layout,"open")
+            self.assertEqual(state.coins,345)
+            self.assertEqual(state.owned_furniture,["bed","plant"])
+            self.assertEqual(len(state.furniture),1)
+            self.assertEqual(state.furniture[0]["item"],"plant")
+            location = house.entry_tile(state.furniture[0])
+            self.assertNotIn(location,walls_for_layout("open"))
+            self.assertNotIn(location,built_in_occupied("open"))
+        finally:
+            house.close()
 
     def test_house_render_and_switch_desktop_pet(self):
         with tempfile.TemporaryDirectory() as temp:
