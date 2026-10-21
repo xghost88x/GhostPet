@@ -21,6 +21,7 @@ MAX_ARCHIVE_SIZE = 32 * 1024 * 1024
 MAX_SINGLE_FILE = 8 * 1024 * 1024
 FILES = (
     "ghostpet.py", "house.py", "activities.py", "nursery.py",
+    "pet_presence.py", "adopted_sprites.py", "cottage_art.py",
     "updater.py", "updater_core.py", "start.sh", "update.sh",
     "install.sh", "requirements.txt", "VERSION", "README.md",
     "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md",
@@ -28,6 +29,7 @@ FILES = (
 )
 REQUIRED = {
     "ghostpet.py", "house.py", "activities.py", "nursery.py",
+    "pet_presence.py", "adopted_sprites.py", "cottage_art.py",
     "updater.py", "updater_core.py", "start.sh", "update.sh",
     "install.sh", "requirements.txt", "VERSION", "assets/ghostpet.svg",
 }
@@ -126,7 +128,7 @@ def update_app(app_dir, progress=lambda message: None, wait_pid=None):
     newest = latest_revision()
     revision_file = app_dir / ".ghostpet-revision"
     installed = revision_file.read_text(encoding="ascii").strip() if revision_file.exists() else ""
-    if newest == installed:
+    if newest == installed and all((app_dir / file).is_file() for file in REQUIRED):
         return "You're already on the latest Ghost Pet version!", False
 
     progress("Downloading the new version securely…")
