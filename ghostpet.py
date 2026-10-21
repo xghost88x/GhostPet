@@ -1009,6 +1009,8 @@ class RoamingPet(QWidget):
         self.home_steps = 0
         self.bubble_text = ""
         self.bubble_until = 0.0
+        self.friend_heart_until = 0.0
+        self.last_friend_interaction = 0.0
         self.setWindowTitle("GhostPet")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool |
                             Qt.WindowType.WindowStaysOnTopHint)
@@ -1027,6 +1029,7 @@ class RoamingPet(QWidget):
         self.move(start_x, start_y)
         self.portal = HomePortal(self)
         self.portal.show()
+        self.buddy = DesktopBuddy(self)
         if current_pet(state) is False:
             self.hide()
 
@@ -1240,8 +1243,9 @@ class RoamingPet(QWidget):
         return bool(selected.get("roaming", True)) if isinstance(selected, dict) else self.state.roaming
 
     def bring_selected_pet_to_desktop(self, pet_id: str) -> bool:
-        """Summon a care-console selection without altering founder's stats or sprite."""
+        """Select a primary without deleting the optional second desktop pet."""
         self.persist()
+        self.buddy.persist()
         if pet_id == FOUNDER and not self.state.egg_hatched:
             if self.console:
                 self.console.tip.setText("Hatch your Founder egg first.")
@@ -1269,6 +1273,7 @@ class RoamingPet(QWidget):
         self.move(px, py)
         self.show()
         self.raise_()
+        self.buddy.sync_presence()
         name = chosen.get("name", "Buddy") if isinstance(chosen, dict) else self.state.name
         self.say(f"{name} is here! ♡")
         self.persist()
@@ -1278,11 +1283,61 @@ class RoamingPet(QWidget):
             self.console.refresh()
         return True
 
+    def invite_selected_buddy(self, pet_id: str) -> bool:
+        """Use the second desktop slot and preserve each pet's independent data."""
+        self.persist()
+        try:
+            invited = invite_companion(self.state, pet_id)
+        except ValueError:
+            return False
+        if not invited:
+            if self.state.desktop_pet_id == pet_id:
+                return True
+            return self.bring_selected_pet_to_desktop(pet_id)
+        self.buddy.sync_presence()
+        self.state.save()
+        if self.house_dialog and self.house_dialog.isVisible():
+            self.house_dialog.refresh()
+        if self.console:
+            self.console.refresh()
+        return True
+
+    def dismiss_buddy(self):
+        self.persist()
+        send_companion_home(self.state)
+        self.buddy.sync_presence()
+        self.state.save()
+        if self.house_dialog and self.house_dialog.isVisible():
+            self.house_dialog.refresh()
+        if self.console:
+            self.console.refresh()
+
+    def open_console_for(self, pet_id):
+        self.open_console()
+        self.console.selected_id = pet_id
+        self.console.refresh()
+
     def return_from_house(self) -> None:
         chosen = self.console.selected_id if self.console else FOUNDER
         self.bring_selected_pet_to_desktop(chosen)
 
     def send_home(self) -> None:
+        if current_pet(self.state) is not False and self.state.desktop_companion_id != NONE:
+            # Promote the buddy when the primary returns indoors; do not
+            # accidentally send both home or paint the same pet twice.
+            self.persist()
+            self.buddy.persist()
+            old_position = self.buddy.pos()
+            send_desktop_pet_home(self.state)
+            self.buddy.sync_presence()
+            self.move(old_position)
+            self.show()
+            self.state.save()
+            if self.house_dialog and self.house_dialog.isVisible():
+                self.house_dialog.refresh()
+            if self.console:
+                self.console.refresh()
+            return
         if current_pet(self.state) is not False:
             self.going_home = True
             self.home_steps = 0
@@ -1307,7 +1362,25 @@ class RoamingPet(QWidget):
 
     def animate(self) -> None:
         self.frame += 1
+        self.buddy.advance()
         active = current_pet(self.state)
+        if (active is not False and self.buddy.isVisible()
+                and abs(self.x()-self.buddy.x()) < 150
+                and abs(self.y()-self.buddy.y()) < 95
+                and time.monotonic()-self.last_friend_interaction > 20
+                and not self.active_sleeping()
+                and random.random() < .035):
+            a,b = self.state.desktop_pet_id, self.state.desktop_companion_id
+            if a != b and b != NONE:
+                strengthen_friendship(self.state, a, b, 1.6)
+                self.last_friend_interaction = time.monotonic()
+                self.friend_heart_until = time.monotonic() + 2.5
+                self.say(random.choice(["♡ Hi, friend!", "Wanna play?", "You're my buddy! ♡"]))
+                self.persist()
+                if self.house_dialog and self.house_dialog.isVisible():
+                    self.house_dialog.refresh()
+                if self.console:
+                    self.console.refresh()
         if self.going_home and active is not False:
             # The target must be reachable by the WHOLE pet window. Near the
             # taskbar/screen edge the window manager can clamp moves, so aiming
@@ -1328,6 +1401,7 @@ class RoamingPet(QWidget):
                 self.home_steps = 0
                 self.persist()
                 send_desktop_pet_home(self.state)
+                self.buddy.sync_presence()
                 self.hide()
                 self.state.save()
                 if self.house_dialog and self.house_dialog.isVisible():
@@ -1367,6 +1441,8 @@ class RoamingPet(QWidget):
             self.console.refresh()
 
     def persist(self) -> None:
+        if hasattr(self, "buddy"):
+            self.buddy.persist()
         selected = current_pet(self.state)
         if isinstance(selected, dict):
             selected["desktop_x"], selected["desktop_y"] = self.x(), self.y()
@@ -1470,6 +1546,7 @@ class RoamingPet(QWidget):
 
     def closeEvent(self, event) -> None:
         self.persist()
+        self.buddy.close()
         super().closeEvent(event)
         QApplication.quit()
 
