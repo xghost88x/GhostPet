@@ -1,8 +1,18 @@
-# GhostPet v0.5.2 Preview — Compact Household Care
+# GhostPet v0.5.3 Preview — Upgradeable Cottages
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.5.3
+
+The house has three switchable floor plans. Open the **Little House**, use the **Cottage floor plan** dropdown, and click **Unlock** or **Switch layout**. Each unlock is permanent and the Founder mouse sprite is unchanged.
+
+- **Woodland Cottage** — starter floor plan, free.
+- **Open Plan Cottage** — 120 coins; wider archways and an open lounge.
+- **Sunny Garden Cottage** — 260 coins after unlocking Open Plan; spacious indoor garden, terracotta accents and fewer partitions.
+
+Your coins pay only once per upgrade. Switching among owned floor plans is free. Furniture and pets stay saved. If furniture occupies a wall that would reappear when switching backwards, the game asks you to move it before changing layouts rather than deleting it. All three plans use the same outer house footprint for now.
 
 ## What's new in v0.5.2
 
