@@ -244,7 +244,7 @@ except ModuleNotFoundError as exc:
                          if p.get("id")==state.desktop_pet_id and
                          p.get("location","house")=="desktop"), False)
         return False
-from PySide6.QtWidgets import (QComboBox, QDialog, QHBoxLayout, QLabel,
+from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QHBoxLayout, QLabel,
                                QPushButton, QVBoxLayout, QWidget)
 
 # Optional imports keep older v0.5.4 updater installations working.
@@ -333,12 +333,18 @@ class HouseCanvas(QWidget):
     def __init__(self, dialog):
         super().__init__(dialog)
         self.dialog = dialog
-        self.setFixedSize(W * TILE, H * TILE)
+        # Fit the actual available Zorin screen, including taskbar and fractional
+        # desktop scaling. Rendering and mouse hit testing share one zoom factor.
+        geometry = QApplication.primaryScreen().availableGeometry()
+        max_width = max(220, geometry.width() - 110)
+        max_height = max(170, geometry.height() - 280)
+        self.zoom = min(1.0, max_width / (W * TILE), max_height / (H * TILE))
+        self.setFixedSize(round(W * TILE * self.zoom), round(H * TILE * self.zoom))
         self.setMouseTracking(True)
 
     def mousePressEvent(self, event):
-        x = int(event.position().x()) // TILE
-        y = int(event.position().y()) // TILE
+        x = int(event.position().x() / (TILE * self.zoom))
+        y = int(event.position().y() / (TILE * self.zoom))
         if event.button() == Qt.MouseButton.RightButton:
             self.dialog.remove_item((x, y))
         elif event.button() == Qt.MouseButton.LeftButton:
@@ -347,6 +353,7 @@ class HouseCanvas(QWidget):
     def paintEvent(self, _event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        p.scale(self.zoom, self.zoom)
         self.draw_floor(p)
         for entry in self.dialog.state.furniture:
             pos = self.dialog.entry_tile(entry)
@@ -512,14 +519,18 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.layout_button.clicked.connect(self.choose_layout)
         layout_row.addWidget(self.layout_button)
         body.addLayout(layout_row)
+        # Keep warnings and unlock confirmations above the drawing. On laptops,
+        # an inaccessible bottom label made a working unlock look unresponsive.
+        self.status = QLabel("Select a cottage layout and click Unlock to upgrade.")
+        self.status.setWordWrap(True)
+        self.status.setMinimumHeight(24)
+        body.addWidget(self.status)
         self.preview_button = QPushButton("🎁 Claim 600 preview coins")
         self.preview_button.setToolTip("One-time test reward to try both house upgrades and furniture")
         self.preview_button.clicked.connect(self.claim_preview_coins)
         body.addWidget(self.preview_button)
         self.canvas = HouseCanvas(self)
         body.addWidget(self.canvas)
-        self.status = QLabel("Click a floor tile to guide your pet between rooms!")
-        body.addWidget(self.status)
         self.tick_timer = QTimer(self)
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(260)
