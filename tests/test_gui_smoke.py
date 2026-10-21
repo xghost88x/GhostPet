@@ -39,8 +39,10 @@ class GhostPetGuiSmokeTests(unittest.TestCase):
                 image = QImage(W*TILE,H*TILE,QImage.Format.Format_ARGB32)
                 image.fill(0)
                 painter = QPainter(image)
-                pet.house_dialog.canvas.render(painter)
-                painter.end()
+                try:
+                    pet.house_dialog.canvas.render(painter)
+                finally:
+                    painter.end()
                 sampled = {
                     image.pixel(x,y)
                     for x in range(4, W*TILE, 9)
