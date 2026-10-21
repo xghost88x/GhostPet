@@ -113,15 +113,23 @@ def pixel_cottage(p, layout, walls):
             for col in range(308+(row%3)*12,522,22):
                 box(p,col,row,2,20,"#cba782")
         rug(p,353,265,100,69,"#769a80","#e0e2bc")
-    # Architectural walls with a lifted 3D effect and continuous trim.
+    # Joined plaster partitions: draw beams only at genuine wall boundaries.
+    # Keep the full old pathfinding footprint, remove Tetris-like tile seams.
     for x,y in walls:
         xx,yy=x*t,y*t
-        box(p,xx+2,yy+5,t,t-3,"#6c5240")  # shadow
-        box(p,xx,yy,t,t-5,"#dcd1b3")
-        box(p,xx,yy,t,7,"#f2e7cd")
-        box(p,xx,yy+7,t,3,"#a28d70")
-        box(p,xx,yy+10,t,t-16,"#b7aa89")
-        box(p,xx,yy+t-7,t,3,"#8f795b")
+        box(p,xx,yy,t,t,"#c9bda1")
+        if (x,y-1) not in walls:
+            box(p,xx,yy,t,7,"#f5e8ca")
+            box(p,xx,yy+7,t,3,"#9d8466")
+        if (x,y+1) not in walls:
+            box(p,xx,yy+t-7,t,4,"#8e7157")
+            box(p,xx,yy+t-3,t,3,"#ddc7a5")
+        if (x-1,y) not in walls:
+            box(p,xx,yy,4,t,"#ead8b7")
+            box(p,xx+4,yy,2,t,"#80654c")
+        if (x+1,y) not in walls:
+            box(p,xx+t-6,yy,3,t,"#92785e")
+            box(p,xx+t-3,yy,3,t,"#f1dbb9")
     # Fix doorway gaps visually: warm timber thresholds make flow clear.
     for x,y in ((8,3),(8,4),(8,8),(3,6),(4,6),(12,6),(13,6),
                 (8,2),(8,5),(8,9),(2,6),(11,6)):
@@ -152,6 +160,7 @@ def pixel_cottage(p, layout, walls):
     box(p,500,298,11,10,"#ecd29e")
     box(p,499,295,5,5,"#be8966")
     box(p,509,295,5,5,"#be8966")
+    draw_room_vignettes(p, layout)
     # Small carved name plaques to replace large overlaid map captions.
     names = {
         "cottage": (("BEDROOM",48,59),("LIVING",320,54),("KITCHEN",40,207),("NURSERY",324,210)),
