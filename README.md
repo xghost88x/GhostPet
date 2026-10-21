@@ -1,8 +1,16 @@
-# GhostPet v0.6.4 Preview — Properly Distinct Cottage Upgrades & Pet Scale
+# GhostPet v0.6.5 Preview — Two Pets & Cottage Friendships
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.6.5
+
+**Two pets on the desktop:** Open Pocket Care, select another hatched pet and click **♡ Invite as Second Pet**. It appears as a separate clickable, draggable pixel sprite beside your current pet. The two roam near each other and occasionally greet one another with floating hearts. Click the second pet for its care controls or right-click it to **Send this pet home**. Only two pets can roam at once. Replacing the second pet sends the previous buddy home. Bringing a new pet out as the lead does not delete anybody or change the Founder's sprite.
+
+**Persistent pair relationship meters:** Pocket Care now has a **Friendship with** selector and meter, plus a little status such as *Getting closer*, *Good friends* and *Best buddies*. The house includes its own **♡ Pet friendships** dropdown and relationship meter covering all pairs, whether they're inside or outside. Relationships start at 30/100, are saved for each unique pair, rise when desktop buddies greet and when housemates meet, and continue rising slowly while pets share the house even if the cottage window is closed. This is separate from the individual pet's affection stat.
+
+**One household save:** Locations derive from the two current desktop slots, avoiding duplicate cats appearing inside and outside. When the lead goes indoors, the other pet becomes the only outdoor pet; no progress is lost. Older single-pet saves migrate automatically. Existing coins, furniture, house upgrades, nursery, Founder mouse and update controls remain.
 
 ## What's new in v0.6.4
 
