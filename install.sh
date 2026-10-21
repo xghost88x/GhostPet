@@ -14,6 +14,7 @@ from pathlib import Path
 source, destination = map(lambda p: Path(p).resolve(), sys.argv[1:3])
 files = (
     "ghostpet.py", "activities.py", "house.py", "nursery.py",
+    "pet_presence.py", "adopted_sprites.py", "cottage_art.py",
     "updater.py", "updater_core.py", "start.sh", "update.sh",
     "install.sh", "requirements.txt", "VERSION",
     "README.md", "CHANGELOG.md", "LICENSE", "CONTRIBUTING.md",
