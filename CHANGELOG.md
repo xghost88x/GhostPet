@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.4-preview — Zorin Launcher & Updates
+
+- Add a friendly original Ghost Pet mouse icon (SVG) and a one-time no-root installer.
+- Add app-menu launchers for Ghost Pet and Update Ghost Pet, plus a desktop shortcut where supported.
+- Add a compact ↻ Update button in Pocket Care and a separate graphical update center.
+- Verify GitHub source revision, validate ZIP paths, and back up pet saves and previous program files before installing updates.
+- Preserve the existing Founder mouse, pet stats, house layouts, coins, furniture and local Python environment.
+- Add automated launcher installation and update safety tests.
+
+
 ## v0.5.3-preview — Upgradeable Woodland Cottages
 
 - Keep the approved v0.5.1 Founder mouse exactly as it is.
