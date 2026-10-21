@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.3-preview — Upgradeable Woodland Cottages
+
+- Keep the approved v0.5.1 Founder mouse exactly as it is.
+- Add two permanent coin-unlockable floor plans: Open Plan (120 coins) and Sunny Garden (260 coins, requires Open Plan).
+- Add floor-plan selector and free switching between unlocked plans directly inside the house.
+- Each upgrade opens extra interior wall passages; the garden plan has a sunny conservatory accent.
+- Preserve all pet data, coins, nursery state, and furniture inventory, and prevent switches that would conceal placed furniture.
+- Test reachability and walking routes through all three layouts.
+
+
 ## v0.5.2-preview — Compact Household Care
 
 - Compact woodland-colored pocket-care console (326 pixels wide) with collapse control.
