@@ -447,6 +447,7 @@ class PetState:
     relationships: dict | None = None
     preview_coins_claimed: bool = False
     last_bowl_meal: float = 0.0
+    auto_social: bool = True
 
     @classmethod
     def load(cls) -> "PetState":
@@ -1232,6 +1233,7 @@ class RoamingPet(QWidget):
         self.pair_interaction = None
         self.pair_interaction_until = 0.0
         self.pair_interaction_pair = ()
+        self.pair_started_at = 0.0
         self.setWindowTitle("GhostPet")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool |
                             Qt.WindowType.WindowStaysOnTopHint)
@@ -1346,38 +1348,64 @@ class RoamingPet(QWidget):
         return True
 
     def start_pair_interaction(self, kind=None):
-        """Begin a bounded desktop interaction; reward only at completion."""
-        actions = ("greet", "nuzzle", "play", "chase")
+        """Begin a visually distinct duet, spontaneous or user-invoked."""
+        actions = ("greet", "nuzzle", "play", "chase",
+                   "highfive", "dance", "peekaboo", "share_snack")
         if kind is not None and kind not in actions:
             raise ValueError(f"Unknown pet interaction: {kind}")
         if not self.pair_ready():
             if self.console:
-                self.console.tip.setText(
-                    "Invite two awake pets onto the desktop to play together.")
+                self.console.tip.setText("Invite two awake pets outside to play together.")
             return False
         if self.pair_interaction:
             return False
-        kind = kind or random.choice(actions)
-        durations = {"greet":2.8, "nuzzle":3.8, "play":5.0, "chase":6.0}
+        if kind is None:
+            a,b = active_desktop_ids(self.state)
+            friendship = relationship_score(self.state,a,b)
+            weights = (3, 2 if friendship>=30 else 1, 3, 2,
+                       2, 2, 2, 2 if friendship>=55 else 1)
+            kind = random.choices(actions,weights=weights,k=1)[0]
+        durations = {
+            "greet":2.8,"nuzzle":3.8,"play":5.0,"chase":6.0,
+            "highfive":3.2,"dance":5.3,"peekaboo":5.2,"share_snack":4.2,
+        }
+        now = time.monotonic()
         self.pair_interaction = kind
         self.pair_interaction_pair = tuple(active_desktop_ids(self.state))
-        self.pair_interaction_until = time.monotonic() + durations[kind]
-        self.last_friend_interaction = time.monotonic()
-        self.friend_heart_until = (
-            time.monotonic() + durations[kind] if kind in ("nuzzle","play") else 0)
+        self.pair_started_at = now
+        self.pair_interaction_until = now + durations[kind]
+        self.last_friend_interaction = now
+        self.friend_heart_until = now + durations[kind] if kind in (
+            "nuzzle","play","highfive","share_snack") else 0
         self.idle_ticks = 0
         self.say({
             "greet":"Oh, hello! ♡",
             "nuzzle":"Cuddle buddies! ♥",
             "play":"Let's play! ✦",
             "chase":"Catch me! ♡",
+            "highfive":"High five! ✨",
+            "dance":"Dance party! ♫",
+            "peekaboo":"Where'd you go?!",
+            "share_snack":"Snack time! Yum!",
         }[kind])
         self.buddy.update()
         self.update()
         return True
 
+    def maybe_start_auto_interaction(self):
+        """Regular but unobtrusive ambient social actions, no manual button needed."""
+        if not self.state.auto_social or self.pair_interaction or not self.pair_ready():
+            return False
+        if abs(self.x()-self.buddy.x()) >= 210 or abs(self.y()-self.buddy.y()) >= 120:
+            return False
+        if time.monotonic()-self.last_friend_interaction < 17:
+            return False
+        if random.random() >= .07:
+            return False
+        return self.start_pair_interaction()
+
     def advance_pair_interaction(self):
-        """Keep actions interactive and safely cancel on roster changes."""
+        """Finish each action once, or cancel cleanly when a pet goes away."""
         if not self.pair_interaction:
             return
         if (tuple(active_desktop_ids(self.state)) != self.pair_interaction_pair
@@ -1391,21 +1419,30 @@ class RoamingPet(QWidget):
             return
         kind = self.pair_interaction
         a,b = self.pair_interaction_pair
-        strengthen_friendship(
-            self.state, a, b,
-            {"greet":0.7,"nuzzle":1.6,"play":2.6,"chase":2.1}[kind])
-        if kind in ("play", "chase"):
+        rewards = {
+            "greet":.7, "nuzzle":1.6, "play":2.6, "chase":2.1,
+            "highfive":1.5, "dance":2.0, "peekaboo":1.4, "share_snack":2.2,
+        }
+        strengthen_friendship(self.state,a,b,rewards[kind])
+        if kind in ("play","chase","dance","highfive","peekaboo","share_snack"):
             for pet_id in (a,b):
-                record = find_adopted(self.state, pet_id)
+                record = find_adopted(self.state,pet_id)
+                target = self.state if record is None else record
                 if record is None:
-                    self.state.happiness = clamp(self.state.happiness+3)
-                    self.state.energy = clamp(self.state.energy-1)
+                    self.state.happiness = clamp(self.state.happiness+4)
+                    if kind in ("play","chase","dance"):
+                        self.state.energy = clamp(self.state.energy-2)
+                    if kind == "share_snack":
+                        self.state.hunger = clamp(self.state.hunger+8)
                 else:
-                    record["happiness"] = clamp(float(record.get("happiness",80))+3)
-                    record["energy"] = clamp(float(record.get("energy",85))-1)
+                    record["happiness"] = clamp(float(record.get("happiness",80))+4)
+                    if kind in ("play","chase","dance"):
+                        record["energy"] = clamp(float(record.get("energy",85))-2)
+                    if kind == "share_snack":
+                        record["hunger"] = clamp(float(record.get("hunger",85))+8)
         self.pair_interaction = None
         self.pair_interaction_pair = ()
-        self.friend_heart_until = time.monotonic()+1.2
+        self.friend_heart_until = time.monotonic()+1.1
         self.last_friend_interaction = time.monotonic()
         self.say("That was fun! ♡")
         self.persist()
@@ -1677,12 +1714,7 @@ class RoamingPet(QWidget):
         self.buddy.advance()
         active = current_pet(self.state)
         self.advance_pair_interaction()
-        if (not self.pair_interaction and self.pair_ready()
-                and abs(self.x()-self.buddy.x()) < 175
-                and abs(self.y()-self.buddy.y()) < 110
-                and time.monotonic()-self.last_friend_interaction > 24
-                and random.random() < .035):
-            self.start_pair_interaction()
+        self.maybe_start_auto_interaction()
         if self.going_home and active is not False:
             # The target must be reachable by the WHOLE pet window. Near the
             # taskbar/screen edge the window manager can clamp moves, so aiming
@@ -1719,14 +1751,14 @@ class RoamingPet(QWidget):
         if self.active_roaming() and not self.active_sleeping() and not self.dragging:
             if self.pair_interaction == "chase" and self.frame % 42 == 0:
                 self.facing *= -1
-            if self.pair_interaction in ("nuzzle","greet"):
+            if self.pair_interaction in ("nuzzle","greet","highfive","share_snack"):
                 self.update()
                 return
             if self.idle_ticks > 0:
                 self.idle_ticks -= 1
             else:
                 geom = QApplication.primaryScreen().availableGeometry()
-                speed = 3 if self.pair_interaction == "chase" else 2
+                speed = 3 if self.pair_interaction in ("chase","dance") else 2
                 next_x = self.x() + self.facing * speed
                 if next_x < geom.left() or next_x > geom.right() - self.width():
                     self.facing *= -1
@@ -1735,7 +1767,7 @@ class RoamingPet(QWidget):
                     self.move(next_x, self.y())
                     if random.random() < 0.004:
                         self.idle_ticks = random.randint(18, 70)
-                    if random.random() < .00018:
+                    if not self.pair_interaction and random.random() < .00018:
                         self.send_home()
         self.update()
 
