@@ -4,6 +4,18 @@ A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
 
+## Windows tester beta
+
+The Windows 10/11 (64-bit) beta is built as a **self-contained ZIP** using a real Windows GitHub Actions runner. Testers extract `GhostPet-Windows-Testers.zip` and double-click `Install-Windows.cmd` to install the executables under `%LOCALAPPDATA%\\GhostPet`, create desktop/Start Menu shortcuts, and launch the app. No Python or admin access is needed.
+
+- New Windows households start with **600 coins**, an unhatched Founder, no pets/items copied from the developer, and the one-off preview coin reward already disabled. Existing saved households keep their actual coins.
+- Saves live in `%LOCALAPPDATA%\\GhostPet\\state.json` independently of the ZIP and are preserved across upgrades.
+- The Pocket Care **↻ Update** button launches a separate temporary copy of `GhostPetUpdater.exe`. It checks `windows-beta-v*` GitHub Releases, verifies the official asset SHA-256 digest, validates the ZIP contents, and replaces the application binaries after the game exits. The updater does not replace `state.json` or ask for admin rights.
+- The first beta executable is **unsigned**. Windows SmartScreen might warn. Download only from [the project's official GitHub Releases page](https://github.com/xghost88x/GhostPet/releases).
+- The new public-facing name is **not final yet**; `GhostPet` remains a compatible internal beta name while branding is selected. Linux install scripts and existing Linux saves continue to work as before.
+- A Windows beta is published only on a **VERSION change** via `.github/workflows/windows-beta.yml`, preventing random source commits from forcing new public updates.
+- See `README-Windows.txt` in the tester ZIP for step-by-step instructions.
+
 ## What's new in v0.7.4
 
 **Now the cat can actually catch it!** The pointer chase previously stayed 30 pixels away from the mouse pointer for click safety but never tested whether the pet had arrived. A successful virtual paw-pounce now happens **when a chasing pet reaches the safe target beside the pointer and the pointer stays mostly still for about 0.4 seconds**. The pointer is never moved or clicked and remains outside the pet's window. Successful catches show **✦ GOTCHA! ✦** above the catching pet, display a victory speech bubble, grant **+6 happiness** and **2 coins**, and end the chase so rewards happen only once. If you keep moving the cursor and the pet cannot catch it within eight seconds, the usual playful escape still happens with the existing +2 happiness reward. You can tease the cat, stop the pointer to let her win, or disable cursor antics in Pocket Care.
