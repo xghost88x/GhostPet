@@ -1,8 +1,18 @@
-# GhostPet v0.5.4 Preview — Clickable Launcher & Updates
+# GhostPet v0.6 Preview — Cozy Cottage & Pet Summoning
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.6
+
+**Cozy Cottage artwork overhaul:** The interior uses original detailed, code-rendered pixel art—continuous wood floors, patterned rugs, windows, curtain details, shelves, plants, kitchen counter details, textured partition trim, and recognizable little furniture sprites. The porch/desktop house icon is now a welcoming woodland cottage rather than a purple haunted-house marker. The existing Woodland/Open Plan/Garden upgrades, navigation, coins and furnishings remain. This is a substantial first art pass, not yet a complete hand-illustrated game environment.
+
+**Bring your chosen pet to the desktop:** Click the roaming companion, choose your Founder or an adopted pet from the **Pocket Care pet selector**, then click **🐾 Bring selected pet to desktop**. The displayed pet swaps to the selected species; the previous pet returns to the house. Your Founder retains the approved v0.5.1 mouse sprite and her own stats. The active pet's desktop coordinates and roaming state persist between launches. **Only one pet roams the desktop at a time** for now. Selecting a pet for care alone does not switch the roaming companion until you press the button.
+
+From the desktop pet, right-click and choose **Walk home** to return it to the house. Open Pocket Care and summon it again whenever you like. Adopted pets disappear from the indoor view while roaming the desktop; the Founder is shown indoors when an adopted pet is outside.
+
+This version is compatible with the v0.5.4 built-in updater, including older installations whose updater does not yet copy the new standalone artwork modules. For a normal update, select **↻ Update** in Pocket Care. You do not need to reset the save.
 
 ## What's new in v0.5.4
 
