@@ -84,7 +84,13 @@ def kitchen_detail(p,x,y):
 
 
 def pixel_cottage(p, layout, walls):
-    """Paint richly layered home flooring, architectural details and tiny props."""
+    """Three independently composed homes, with separate furniture placements."""
+    if layout == "open":
+        draw_open_plan_home(p, walls)
+        return
+    if layout == "garden":
+        draw_sunny_garden_home(p, walls)
+        return
     t = TILE
     w,h = W*t,H*t
     # Continuous wood planks spanning rooms, staggered by half-width.
@@ -261,16 +267,29 @@ def cottage_item(p, px, py, item, tint):
 
 
 def built_in_occupied(layout):
-    """Reserved cells for built-in furnishings; kept away from every doorway."""
-    tiles = {
-        (4,2),(5,2),(4,3),(5,3),(4,4),(5,4),  # bedroom quilted bed
-        (10,3),(11,3),(12,3),(10,4),(11,4),  # living room couch
-        (1,8),(1,9),(1,10),                   # kitchen wall pantry
-        (5,9),(6,9),                          # dining table
-        (15,8),(16,8),(15,9),(16,9),          # nursery / garden structure
+    """Actual obstruction footprints for each different permanent room scene."""
+    if layout == "open":
+        return {
+            (2,2),(3,2),(4,2),(2,3),(3,3),(4,3), # enclosed sleeping nook
+            (8,2),(9,2),(10,2),(11,2),(12,2),  # kitchen counter
+            (10,4),(11,4),(12,4),                # breakfast island
+            (3,8),(4,8),(5,8),(3,9),(4,9),      # oversized sofa
+            (13,8),(14,8),                      # pet den
+        }
+    if layout == "garden":
+        return {
+            (2,2),(3,2),(4,2),(3,3),(4,3),      # sleeping alcove
+            (3,8),(4,8),(5,8),                  # cedar garden bench
+            (13,7),(14,7),(13,8),(14,8),       # lily pond
+            (10,2),(11,2),(14,2),(15,2),       # potting stands
+        }
+    return {
+        (4,2),(5,2),(4,3),(5,3),(4,4),(5,4),
+        (10,3),(11,3),(12,3),(10,4),(11,4),
+        (1,8),(1,9),(1,10),
+        (5,9),(6,9),
+        (15,8),(16,8),(15,9),(16,9),
     }
-    return tiles
-
 
 def draw_room_vignettes(p, layout):
     """Recognizable, larger-than-one-tile furnishings for a lived-in cottage."""
@@ -488,3 +507,219 @@ def draw_upgrade_features(p, layout):
             box(p,xx,229,4,24,"#e1d9b4")
         box(p,173,254,9,17,"#80604a")
         box(p,227,254,9,17,"#80604a")
+
+
+# v0.7 - These two layouts do NOT reuse the starter cottage vignette.
+# Room maps are still 18x12 for compatibility with old furniture and save files.
+def _new_plan_shell(p, walls, window_color="#a8d2c8"):
+    """Connected wall beams and clean exterior border around a unique room scene."""
+    for x,y in walls:
+        xx,yy=x*TILE,y*TILE
+        box(p,xx,yy,TILE,TILE,"#bda887")
+        if (x,y-1) not in walls:
+            box(p,xx,yy,TILE,7,"#f7e5bf")
+            box(p,xx,yy+7,TILE,3,"#987e61")
+        if (x,y+1) not in walls:
+            box(p,xx,yy+TILE-8,TILE,5,"#82664c")
+            box(p,xx,yy+TILE-3,TILE,3,"#ebd3a7")
+        if (x-1,y) not in walls:
+            box(p,xx,yy,4,TILE,"#e8d5af")
+        if (x+1,y) not in walls:
+            box(p,xx+TILE-5,yy,5,TILE,"#886b50")
+    # Large cottage windows keep the art from looking like a raw grid.
+    for xx in (66,416):
+        window(p,xx,3,92)
+    for yy in (85,251):
+        window(p,1,yy,28)
+        window(p,547,yy,28)
+
+
+def _room_sign(p, label, x, y, width=125, accent="#987750"):
+    box(p,x+2,y+2,width,21,"#654e3a")
+    box(p,x,y,width,19,accent)
+    p.setPen(QColor("#fff1cf"))
+    p.setFont(QFont("Sans", 9, QFont.Weight.Bold))
+    p.drawText(x+8,y+14,label)
+
+
+def _plank_floor(p, base, board, stripe):
+    box(p,0,0,576,384,base)
+    for yy in range(32,353,18):
+        box(p,32,yy,512,17,board if yy//18%2 else base)
+        box(p,32,yy+16,512,2,stripe)
+        for xx in range(32+((yy//18)%2)*50,544,105):
+            box(p,xx,yy,2,17,stripe)
+
+
+def draw_open_plan_home(p, walls):
+    """One enormous integrated kitchen/lounge with a *small* bedroom nook."""
+    _plank_floor(p,"#e1bd91","#efd0a4","#c39b71")
+    p.save()
+    p.setClipRect(32,32,512,320)
+    # Cozy but deliberately SMALL bedroom. Rest of the home is one shared hall.
+    box(p,33,33,159,127,"#d9c6a2")
+    for xx in range(39,191,26):
+        box(p,xx,39,1,115,"#baaa87")
+    rug(p,40,66,133,87,"#a17c67","#e8cbb8")
+    box(p,60,85,91,60,"#7e5f48")
+    box(p,64,80,83,62,"#b48d6b")
+    box(p,68,84,75,13,"#fff1df")
+    box(p,71,85,29,10,"#fffaf0")
+    box(p,106,85,31,10,"#f1e8d8")
+    box(p,68,100,75,36,"#a9bea0")
+    for xx in (72,91,110,129):
+        box(p,xx,106,16,26,"#cad8af" if xx%2 else "#8caa94")
+    box(p,69,138,73,3,"#785743")
+    box(p,155,94,24,20,"#916d50")
+    box(p,157,92,19,15,"#c6a077")
+    box(p,164,86,7,8,"#fff1b5")
+    _room_sign(p,"SLEEPING NOOK",40,40,146,"#b48d71")
+    # Kitchen is in a totally different place from Woodland: long upper
+    # wall counter, wide breakfast island and stools.
+    box(p,221,42,310,58,"#8a6b51")
+    box(p,225,46,302,48,"#d9c5a6")
+    box(p,232,48,289,24,"#f3e7cf")
+    for xx in range(235,522,39):
+        box(p,xx,75,33,16,"#c49b73")
+        box(p,xx+15,81,3,5,"#73553e")
+    box(p,263,55,46,23,"#8db1b2")
+    box(p,270,56,31,16,"#d9ede3")
+    box(p,379,56,44,18,"#b5a18d")
+    for xx in (385,404):
+        box(p,xx,62,12,6,"#615c55")
+    for xx in (440,465,490):
+        box(p,xx,51,15,18,"#f0cf99")
+        box(p,xx+2,52,11,3,"#9cae85")
+    # Long freestanding island dominates the central great-room.
+    box(p,304,133,149,58,"#735440")
+    box(p,302,128,148,54,"#bc9368")
+    box(p,306,125,141,40,"#f0dfc3")
+    box(p,318,137,37,21,"#fff4da")
+    box(p,329,139,16,11,"#8cb6ad")
+    box(p,389,134,15,14,"#b1bf83")
+    box(p,385,133,24,6,"#6f9d72")
+    for xx in (323,365,411):
+        box(p,xx,185,24,12,"#806248")
+        box(p,xx+3,181,18,7,"#d8b997")
+    # ONE big connected family space from left to right across bottom.
+    rug(p,57,210,453,122,"#7b8f78","#c8d6b2")
+    box(p,62,215,441,4,"#e9e0c6")
+    box(p,62,325,441,4,"#e9e0c6")
+    # Generous L-shaped couch, rather than starter's tiny fixed-room sofa.
+    box(p,75,234,170,78,"#485f58")
+    box(p,80,231,157,74,"#739784")
+    for xx in (86,132,178):
+        box(p,xx,243,42,40,"#c2d2b7")
+        box(p,xx+3,248,36,31,"#a9bfad")
+    box(p,80,284,154,15,"#5f816e")
+    box(p,72,258,16,51,"#587763")
+    box(p,229,263,17,46,"#597763")
+    # L extension
+    box(p,77,293,79,31,"#678a74")
+    box(p,81,298,72,20,"#abc2a5")
+    # Coffee table and a vase.
+    box(p,257,248,111,52,"#725640")
+    box(p,254,241,113,52,"#cba47a")
+    box(p,261,247,99,39,"#e7c99e")
+    box(p,299,254,23,21,"#f8e6bd")
+    box(p,304,248,13,9,"#92ad87")
+    for xx in (272,283):
+        box(p,xx,262,9,8,"#fff2d8")
+    # Pet corner replaces an entire separate nursery.
+    box(p,394,246,103,68,"#a27a59")
+    box(p,397,241,99,68,"#dfbc91")
+    box(p,401,246,88,58,"#f1e0c5")
+    box(p,410,256,70,32,"#e7bca4")
+    box(p,417,263,56,19,"#f6d6bc")
+    box(p,456,245,17,21,"#b48261")
+    box(p,460,238,9,12,"#cd9970")
+    # A few open plan highlights.
+    plant(p,497,198)
+    bookcase(p,477,102)
+    _room_sign(p,"OPEN LIVING + DINING",260,201,217,"#78977e")
+    _room_sign(p,"FULL KITCHEN",286,103,158,"#ab8962")
+    p.restore()
+    _new_plan_shell(p,walls)
+
+
+def draw_sunny_garden_home(p, walls):
+    """Woodland retreat LEFT, dramatic glass conservatory on the RIGHT."""
+    box(p,0,0,576,384,"#b6a38b")
+    p.save()
+    p.setClipRect(32,32,512,320)
+    # Left: raised cedar deck with pergola, outdoor bench, nap nook.
+    box(p,32,32,244,320,"#ad815b")
+    for yy in range(35,352,17):
+        box(p,33,yy,241,15,"#c89a6c" if (yy//17)%2 else "#b98c60")
+        box(p,33,yy+14,241,2,"#946f51")
+        for xx in range(34+((yy//17)%2)*33,275,66):
+            box(p,xx,yy,2,14,"#ae7f5b")
+    # Right: huge glazed greenhouse occupies nearly HALF the house.
+    box(p,276,32,268,320,"#91ae8f")
+    for yy in range(36,352,34):
+        for xx in range(281,541,34):
+            box(p,xx,yy,31,31,
+                "#cee0ba" if (xx//34+yy//34)%2 else "#a8c9a7")
+            box(p,xx+2,yy+2,9,3,"#e1f4d1")
+    # Tall vertical window/greenhouse bars read as greenhouse, not lounge.
+    for xx in range(287,543,51):
+        box(p,xx,33,5,311,"#e8ead0")
+        box(p,xx+5,33,2,311,"#658a79")
+    for yy in (38,138,238,343):
+        box(p,282,yy,253,5,"#e6e7cf")
+    # Bright sunbeams.
+    for shift in range(0,152,28):
+        box(p,305+shift,51,10,79,"#e2f1d4")
+    # Original deck lounge differs from both rooms in other plans.
+    rug(p,49,180,202,116,"#867759","#dfd2a7")
+    box(p,55,65,162,84,"#765b46")
+    box(p,59,59,154,80,"#9d8764")
+    box(p,66,67,140,23,"#ebd6b6")
+    for xx in (70,118,166):
+        box(p,xx,69,37,18,"#faf0da")
+    box(p,66,93,139,39,"#b7bf9e")
+    for xx in (71,100,129,158):
+        box(p,xx,100,25,26,"#8ba28b" if xx%2 else "#d9cea5")
+    box(p,64,141,146,6,"#765f4c")
+    # Outdoor cedar swing seat & side table.
+    box(p,55,218,159,18,"#6d5542")
+    box(p,59,225,151,34,"#9c7659")
+    box(p,63,229,144,21,"#d5b38c")
+    for xx in range(68,204,21):
+        box(p,xx,228,6,21,"#e5c4a1")
+    box(p,65,255,9,30,"#675441")
+    box(p,192,255,9,30,"#675441")
+    box(p,222,229,33,34,"#77634d")
+    box(p,226,225,25,30,"#e3bf94")
+    box(p,230,230,17,6,"#f0e4bf")
+    box(p,234,221,9,7,"#7c9f7a")
+    # Entire conservatory has potting beds, plant trellises and a big pond.
+    for xx in (300,352,406,466,504):
+        box(p,xx,80,30,69,"#81644b")
+        box(p,xx+3,86,24,58,"#b28a69")
+        for yy in (93,110,127):
+            box(p,xx+6,yy,17,8,"#4c8b64")
+            box(p,xx+10,yy-8,11,12,"#80b481")
+    # Grand central pond: clearly not a Woodland nursery.
+    p.setPen(QColor("#5f8b84"))
+    p.setBrush(QColor("#7caca5"))
+    p.drawEllipse(353,194,148,119)
+    p.setPen(QColor("#d0e9d6"))
+    p.setBrush(QColor("#91c0b7"))
+    p.drawEllipse(365,204,124,99)
+    p.setPen(Qt.PenStyle.NoPen)
+    for xx,yy in ((386,230),(436,246),(413,271)):
+        box(p,xx,yy,24,13,"#5b9d78")
+        box(p,xx+13,yy-3,7,7,"#f6dcac")
+    for xx,yy in ((298,180),(501,185),(304,292),(495,297)):
+        plant(p,xx,yy)
+    # Raised potting bench and seed trays, upper right.
+    box(p,339,158,155,24,"#654b3b")
+    box(p,344,153,145,24,"#c6a077")
+    for xx,col in ((350,"#628e62"),(386,"#afbe7e"),(422,"#669a70"),(458,"#d0b77d")):
+        box(p,xx,158,27,14,col)
+        box(p,xx+6,151,14,8,"#92bc86")
+    _room_sign(p,"CEDAR RETREAT",60,40,153,"#967253")
+    _room_sign(p,"SUNLIT GLASS GARDEN",317,40,206,"#5f977e")
+    p.restore()
+    _new_plan_shell(p,walls)
