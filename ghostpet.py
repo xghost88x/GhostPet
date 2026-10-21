@@ -94,6 +94,8 @@ class PetState:
     founder: bool = False
     adopted_pets: list | None = None
     nursery_egg_taps: int = -1
+    house_layout: str = "cottage"
+    unlocked_house_layouts: list | None = None
 
     @classmethod
     def load(cls) -> "PetState":
@@ -124,6 +126,12 @@ class PetState:
         state.affection = clamp(float(state.affection))
         state.adopted_pets = state.adopted_pets if isinstance(state.adopted_pets, list) else []
         state.nursery_egg_taps = int(state.nursery_egg_taps) if isinstance(state.nursery_egg_taps, int) else -1
+        # v0.5.2 layout progress is independent of the original pet and furniture.
+        valid_layouts = ("cottage", "open", "garden")
+        unlocked = state.unlocked_house_layouts if isinstance(state.unlocked_house_layouts, list) else []
+        state.unlocked_house_layouts = ["cottage"] + [key for key in valid_layouts[1:] if key in unlocked]
+        if state.house_layout not in state.unlocked_house_layouts:
+            state.house_layout = "cottage"
         state.furniture = state.furniture if isinstance(state.furniture, list) else []
         state.owned_furniture = (state.owned_furniture if isinstance(state.owned_furniture, list)
                                  else ["bed"])
