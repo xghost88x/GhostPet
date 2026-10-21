@@ -291,18 +291,23 @@ LAYOUTS = {
 
 
 def walls_for_layout(layout):
-    """Higher-tier plans open existing walls; nothing purchased gets erased."""
+    """Three genuinely different, walkable internal cottage floor plans.
+
+    The exterior footprint never changes, so saves and window sizing remain
+    stable; wider archways replace structural partitions on paid upgrades.
+    """
     changed = set(WALLS)
     if layout in ("open", "garden"):
-        # A spacious living/dining opening and wider inter-room archways.
-        changed.difference_update({(8, y) for y in (2, 5, 9)})
-        changed.difference_update({(x, 6) for x in (2, 11)})
+        # Open upper lounge into the bedroom and replace most of the long
+        # central hallway with archways. End posts remain as visual columns.
+        changed.difference_update({(8, y) for y in (2, 3, 4, 5)})
+        changed.difference_update({(x, 6) for x in
+                                   (2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15)})
     if layout == "garden":
-        # Open-plan garden level has an unobstructed lower sunroom.
-        changed.difference_update({(8, y) for y in (1, 6, 7, 10)})
-        changed.difference_update({(x, 6) for x in (5, 6, 10, 14)})
+        # Conservatory is truly open to the whole home, not just a colorway.
+        changed.difference_update({(8, y) for y in range(1, H-1)})
+        changed.difference_update({(8, 6), (9, 6), (1, 6), (16, 6)})
     return changed
-
 
 def path_between(start, goal, blocked=frozenset(), wall_tiles=None):
     """Four-directional shortest walk; returns [] if the target cannot be reached."""
