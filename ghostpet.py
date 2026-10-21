@@ -658,6 +658,115 @@ class HomePortal(QWidget):
                 self.pet.open_house()
 
 
+class DesktopBuddy(QWidget):
+    """Independent second desktop sprite, attached to the same saved household."""
+    def __init__(self, lead):
+        super().__init__()
+        self.lead = lead
+        self.facing = -1
+        self.frame = 0
+        self.drag_start = None
+        self.drag_offset = QPoint()
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool |
+                            Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setFixedSize(124, 116)
+        self.setToolTip("Your second pet • click to care • drag to move")
+        self.sync_presence()
+
+    def pet_id(self):
+        return getattr(self.lead.state, "desktop_companion_id", NONE)
+
+    def sync_presence(self):
+        pet_id = self.pet_id()
+        if pet_id == NONE or pet_id not in active_desktop_ids(self.lead.state):
+            self.hide()
+            return
+        record = find_adopted(self.lead.state, pet_id)
+        x = record.get("desktop_x", -1) if record else self.lead.state.x
+        y = record.get("desktop_y", -1) if record else self.lead.state.y
+        geom = QApplication.primaryScreen().availableGeometry()
+        if not isinstance(x, int) or x < geom.left() or x > geom.right():
+            x = self.lead.x() + 140
+        if not isinstance(y, int) or y < geom.top() or y > geom.bottom():
+            y = self.lead.y()
+        x = max(geom.left(), min(x, geom.right() - self.width() + 1))
+        y = max(geom.top(), min(y, geom.bottom() - self.height() + 1))
+        self.move(x,y)
+        self.show()
+        self.update()
+
+    def persist(self):
+        pet_id = self.pet_id()
+        if pet_id == NONE:
+            return
+        if pet_id == FOUNDER:
+            self.lead.state.x, self.lead.state.y = self.x(), self.y()
+        else:
+            record = find_adopted(self.lead.state, pet_id)
+            if record:
+                record["desktop_x"], record["desktop_y"] = self.x(), self.y()
+
+    def paintEvent(self, _event):
+        pet_id = self.pet_id()
+        if pet_id == NONE or pet_id not in active_desktop_ids(self.lead.state):
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        record = find_adopted(self.lead.state, pet_id)
+        if record is None and pet_id == FOUNDER:
+            draw_pet(painter, self.width(), self.height(), self.lead.state,
+                     self.frame, scale=4, facing=self.facing)
+        elif record is not None:
+            scale = 2 if record.get("species") == "Cat" else 3
+            draw_adopted_pet(painter, self.width(), self.height(), record,
+                             self.frame, scale=scale, facing=self.facing)
+        if self.lead.friend_heart_until > time.monotonic():
+            painter.setPen(QColor("#ea829f"))
+            painter.setFont(QFont("Sans",18,QFont.Weight.Bold))
+            painter.drawText(57, 20,"♥")
+
+    def advance(self):
+        if not self.isVisible():
+            return
+        self.frame += 1
+        if self.drag_start is None and self.frame % 4 == 0:
+            geom = QApplication.primaryScreen().availableGeometry()
+            # Wander around the lead pet with a small breathing gap.
+            target_x = self.lead.x() + (105 if self.facing < 0 else -105)
+            delta = target_x - self.x()
+            if abs(delta) > 14:
+                x = self.x() + max(-3, min(3, delta))
+                self.move(max(geom.left(), min(x, geom.right()-self.width()+1)), self.y())
+            if self.frame % 75 == 0:
+                self.facing *= -1
+        self.update()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.RightButton:
+            menu = QMenu(self)
+            menu.addAction("♥ Care for this pet", lambda: self.lead.open_console_for(self.pet_id()))
+            menu.addAction("⌂ Send this pet home", self.lead.dismiss_buddy)
+            menu.exec(event.globalPosition().toPoint())
+        elif event.button() == Qt.MouseButton.LeftButton:
+            self.drag_start = event.globalPosition().toPoint()
+            self.drag_offset = self.drag_start - self.pos()
+
+    def mouseMoveEvent(self, event):
+        if self.drag_start is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            if (event.globalPosition().toPoint()-self.drag_start).manhattanLength() > 6:
+                self.move(event.globalPosition().toPoint()-self.drag_offset)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self.drag_start is not None:
+            moved = (event.globalPosition().toPoint()-self.drag_start).manhattanLength() > 6
+            self.drag_start = None
+            self.persist()
+            if not moved:
+                self.lead.open_console_for(self.pet_id())
+
+
 class CareConsole(QDialog):
     """Compact shared-household care panel; the original PetState remains canonical."""
     def __init__(self, pet: "RoamingPet"):
