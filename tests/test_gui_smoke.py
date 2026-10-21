@@ -43,6 +43,26 @@ class GhostPetGuiSmokeTests(unittest.TestCase):
                 pet.house_dialog.claim_preview_coins()
                 self.assertEqual(state.coins, balance + 600,
                                  "Preview gift must only be claimable once")
+                # Exercise actual visible buttons, not merely unlock helpers.
+                house = pet.house_dialog
+                house.layout_selector.setCurrentIndex(1)
+                self.assertIn("120", house.layout_button.text())
+                house.layout_button.click()
+                self.assertEqual(state.house_layout, "open", house.status.text())
+                self.assertEqual(state.coins, balance + 480)
+                self.assertIn("Open Plan", house.status.text())
+                house.layout_selector.setCurrentIndex(2)
+                house.layout_button.click()
+                self.assertEqual(state.house_layout, "garden", house.status.text())
+                self.assertEqual(state.coins, balance + 220)
+                # Switching to an owned layout must remain free.
+                house.layout_selector.setCurrentIndex(0)
+                house.layout_button.click()
+                self.assertEqual(state.house_layout, "cottage", house.status.text())
+                self.assertEqual(state.coins, balance + 220)
+                self.assertLessEqual(house.canvas.width(), W*TILE)
+                self.assertLessEqual(house.canvas.height(), H*TILE)
+                self.assertGreater(house.canvas.zoom, 0)
                 image = QImage(W*TILE,H*TILE,QImage.Format.Format_ARGB32)
                 image.fill(0)
                 pet.house_dialog.canvas.render(image)
