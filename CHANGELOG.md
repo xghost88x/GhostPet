@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.2-preview — Autonomous Pet Antics & Working Food Bowls
+
+- Expand two-pet interactions from four to eight: greet, nuzzle, play, chase, high-five, dance, peekaboo and share a snack.
+- Add distinct partner approach, hopping, dancing, hiding and playful social effects, while keeping the original Founder art intact.
+- Let two nearby awake companions initiate interactions spontaneously with a sensible cooldown, default-on Auto interactions toggle and Surprise action in collapsible Pocket Care.
+- Reward friendship once after a completed encounter, with minor context-dependent effects on individual pet happiness, hunger and energy.
+- Implement six-meal, refillable food bowls placed using the House Decorate menu; click a bowl in Explore or press the refill control to replenish servings for free.
+- Make hungry indoor pets walk to bowls and eat, restoring 26 hunger points per serving with a one-minute per-pet cooldown; indoor feeding continues while the app runs and the house is closed.
+- Preserve old saved food bowl locations and automatically initialize existing bowls as stocked. Keep stored servings when relocating furniture on cottage renovations.
+- Add tests for all social modes, toggle UI, feeding restrictions, automatic hunger recovery, food depletion/refills and save compatibility.
+
+
 ## v0.7.1-preview — Desktop Buddy Interactions & Clean Room Art
 
 - Remove floating room-name plaques and text overlays from Woodland, Open Plan and Sunny Garden; retain all layout upgrades and navigation.
