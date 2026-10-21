@@ -503,6 +503,14 @@ class PetState:
             self.happiness = clamp(self.happiness - elapsed_hours * 3.0)
             self.cleanliness = clamp(self.cleanliness - elapsed_hours * 3.5)
             self.energy = clamp(self.energy - elapsed_hours * 4.0)
+        # Adopted housemates also get hungry over time, independently of
+        # the Founder. A stocked bowl can then actually restore their hunger.
+        for housemate in (self.adopted_pets or []):
+            if not isinstance(housemate,dict):
+                continue
+            hunger = float(housemate.get("hunger",85))
+            housemate["hunger"] = clamp(
+                hunger-elapsed_hours*(.8 if housemate.get("sleeping") else 5.0))
         # Indoor pair bonds grow even when the cottage window is closed.
         advance_house_friendships(self, elapsed_hours)
         # Deliberately gentle: the pet never dies while you are away.
