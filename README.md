@@ -1,8 +1,18 @@
-# GhostPet v0.6.2 Preview — Furnished Cottage, Real Cat Sprite & Testing Coins
+# GhostPet v0.6.3 Preview — Cottage Fit, Working Unlocks & Cuddles
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.6.3
+
+**House fits the screen:** The cottage canvas now automatically scales down to fit the available Zorin desktop area, including space for the controls and taskbar. Pointer coordinates scale with the art, so tile movement and decorating still work. The larger room furnishings are now drawn at 82% of their former size and clipped within the cottage.
+
+**Layout unlock feedback fixed:** Layout purchase/denial messages now appear **above** the canvas instead of below it, where short displays could hide them. Select Open Plan or Sunny Garden from the layout dropdown, then click the **Unlock** button next to it. Open Plan costs 120 coins; Garden costs 260 coins and requires Open Plan first. Insufficient-coins and furniture-collision messages appear in that visible status strip. The 600-coin preview gift remains in the house until claimed. Automated GUI tests click both unlock buttons and check the saved coin balances.
+
+**Cuddle is now accessible:** In Pocket Care, choose your pet and press **♡ Cuddle**. That pet will come to the desktop if it is indoors. Then click the pet **five times** to complete the cuddle. Cuddles work with the Founder mouse and adopted pets, increasing the selected pet's affection and happiness; sleeping pets must be awakened first. Click the Cuddle button again or right-click the desktop pet to cancel.
+
+The approved Founder mouse appearance is unchanged. Use Pocket Care's **↻ Update** button to install this revision, then relaunch Ghost Pet.
 
 ## What's new in v0.6.2
 
