@@ -248,6 +248,7 @@ class PetState:
     house_layout: str = "cottage"
     unlocked_house_layouts: list | None = None
     desktop_pet_id: str = "founder"
+    preview_coins_claimed: bool = False
 
     @classmethod
     def load(cls) -> "PetState":
