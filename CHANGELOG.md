@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.2-preview — Furnished Woodland Cottage & Cat Sprite
+
+- Replace block-looking wall seams with joined plaster trim and wood-edged doors.
+- Furnish every room with much more recognizable, larger pixel-art props: patchwork bed, pillows, bedside lamp, large couch, tea table, botanical paintings, kitchen cabinets and dining nook, toy shelf and crib.
+- Give Sunny Garden its own visible conservatory furnishing scene rather than a recolored nursery.
+- Keep heavy built-in furniture out of pet movement routes and ensure pets are relocated safely from newly occupied positions.
+- Replace generic Cat desktop rendering with a dedicated tabby cat with triangular ears, whiskers, paws and curled tail; use the same design indoors.
+- Add a one-time, explicitly opt-in +600 preview testing coin gift inside the house. Existing coins and purchased layouts are preserved.
+- Keep the Founder mouse's approved sprite exactly as it was in v0.5.1.
+- Add offscreen GUI, artwork and save-state regression tests.
+
+
 ## v0.6.1-preview — Responsive Update Center
 
 - Replace the unresponsive updater worker thread with a separately monitored process.
