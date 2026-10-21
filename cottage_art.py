@@ -4,6 +4,7 @@ Deliberately keeps 18x12 invisible navigation grid separate from visible art.
 All rendering is local QPainter shapes; no external assets or network required.
 """
 from __future__ import annotations
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPen
 
 TILE = 32
