@@ -10,6 +10,7 @@ import json
 import math
 import os
 import random
+import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass, fields
@@ -418,6 +419,10 @@ class CareConsole(QDialog):
         self.collapse.setFixedWidth(32)
         self.collapse.clicked.connect(self.toggle_compact)
         top.addWidget(self.collapse)
+        self.update_button = QPushButton("↻ Update")
+        self.update_button.setToolTip("Check GitHub for a Ghost Pet update")
+        self.update_button.clicked.connect(pet.open_updater)
+        top.addWidget(self.update_button)
         outer.addLayout(top)
         self.selector = QComboBox()
         self.selector.currentIndexChanged.connect(self.select_pet)
@@ -754,6 +759,25 @@ class RoamingPet(QWidget):
         else:
             self.say(random.choice(["♥", "Eee! ♡", "More!", "hehe ♡"]))
         self.update()
+
+    def open_updater(self) -> None:
+        """Open the separate graphical updater, then exit cleanly for safe patching."""
+        launcher = Path(__file__).resolve().with_name("update.sh")
+        if not launcher.is_file():
+            QMessageBox.warning(self, "Updater missing",
+                                "Install the latest Ghost Pet from GitHub first.")
+            return
+        try:
+            self.persist()
+            subprocess.Popen(
+                ["bash", str(launcher), "--wait-pid", str(os.getpid())],
+                cwd=str(launcher.parent), start_new_session=True,
+                env=os.environ.copy(),
+            )
+        except OSError as exc:
+            QMessageBox.warning(self, "Could not open updater", str(exc))
+            return
+        QApplication.instance().quit()
 
     def open_nursery(self) -> None:
         if self.nursery_dialog and self.nursery_dialog.isVisible():
