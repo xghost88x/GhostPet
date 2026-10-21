@@ -721,7 +721,8 @@ class CareConsole(QDialog):
             self.stats[key] = (bar, amount)
         actions = QGridLayout()
         for i,(label,action) in enumerate((("🍎 Feed","feed"),("🎾 Play","play"),
-                                            ("🫧 Clean","clean"),("💤 Sleep","sleep"))):
+                                            ("🫧 Clean","clean"),("💤 Sleep","sleep"),
+                                            ("♡ Cuddle","cuddle"))):
             btn = QPushButton(label)
             btn.clicked.connect(lambda checked=False, a=action: self.care_selected(a))
             actions.addWidget(btn,i//2,i%2)
@@ -782,6 +783,9 @@ class CareConsole(QDialog):
         self.adjustSize()
 
     def care_selected(self, action):
+        if action == "cuddle":
+            self.pet.open_cuddles(self.selected_id)
+            return
         adopted = self.household_pet()
         if adopted is None:
             self.pet.care(action)
@@ -1019,12 +1023,20 @@ class RoamingPet(QWidget):
         self.game_dialog = GameDialog(self.activity_reward, self)
         self.game_dialog.show()
 
-    def open_cuddles(self) -> None:
-        if self.state.desktop_pet_id != FOUNDER:
-            self.say("Cuddle our friends in Pocket Care! ♡")
+    def open_cuddles(self, pet_id=None) -> None:
+        """Start or cancel the five-click cuddle ritual for either household pet."""
+        selected_id = self.state.desktop_pet_id if pet_id is None else pet_id
+        if selected_id == FOUNDER and not self.state.egg_hatched:
+            self.say("Our Founder must hatch first! ♡")
             return
-        if self.state.sleeping or not self.state.egg_hatched:
-            self.say("Zzz...")
+        active = current_pet(self.state)
+        if selected_id != self.state.desktop_pet_id or active is False:
+            if not self.bring_selected_pet_to_desktop(selected_id):
+                return
+            active = current_pet(self.state)
+        sleeping = active.get("sleeping", False) if isinstance(active, dict) else self.state.sleeping
+        if sleeping:
+            self.say("Zzz... wake me for cuddles!")
             return
         if self.cuddle_mode:
             self.cuddle_mode = False
@@ -1035,7 +1047,8 @@ class RoamingPet(QWidget):
             self.cuddle_taps = 0
             self.say("Pat me five times! ♡")
         if self.console:
-            self.console.tip.setText("Click the roaming pet five times to cuddle; right-click to cancel.")
+            self.console.tip.setText(
+                "Click the roaming pet five times to cuddle; right-click to cancel.")
         self.update()
 
     def pat_directly(self) -> None:
@@ -1045,7 +1058,17 @@ class RoamingPet(QWidget):
         if self.cuddle_taps >= 5:
             self.cuddle_mode = False
             self.cuddle_taps = 0
-            self.activity_reward("cuddle", 5)
+            selected = current_pet(self.state)
+            if isinstance(selected, dict):
+                selected["cuddles"] = int(selected.get("cuddles", 0)) + 1
+                selected["affection"] = clamp(float(selected.get("affection", 30)) + 14)
+                selected["happiness"] = clamp(float(selected.get("happiness", 80)) + 11)
+                self.say(f"{selected.get('name', 'Buddy')} loved that! ♡")
+                self.persist()
+                if self.console:
+                    self.console.refresh()
+            else:
+                self.activity_reward("cuddle", 5)
             if self.console:
                 self.console.tip.setText("Cuddle complete! Your buddy feels loved. ♥")
         else:
