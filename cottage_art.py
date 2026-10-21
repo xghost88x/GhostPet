@@ -113,6 +113,32 @@ def pixel_cottage(p, layout, walls):
             for col in range(308+(row%3)*12,522,22):
                 box(p,col,row,2,20,"#cba782")
         rug(p,353,265,100,69,"#769a80","#e0e2bc")
+    # Each purchasable floor plan gets its own strongly recognizable ground:
+    # the Open Plan has an expansive sage lounge, Garden an entire conservatory.
+    if layout == "open":
+        box(p,202,69,335,139,"#ccb08a")
+        for yy in range(77,203,22):
+            box(p,209,yy,319,3,"#efd5af")
+            for xx in range(214+(yy % 3)*12,523,56):
+                box(p,xx,yy+3,2,17,"#aa8665")
+        rug(p,240,99,239,103,"#5c866f","#a9c5aa")
+        box(p,272,106,174,6,"#e9d8b6")
+    elif layout == "garden":
+        # Premium plan uses a visually dramatic terracotta-and-sage
+        # conservatory floor, extending through the open lower living zone.
+        box(p,32,198,512,153,"#e3c8a0")
+        for yy in range(200,350,24):
+            for xx in range(35,542,24):
+                box(p,xx,yy,22,22,
+                    "#d6b28a" if (xx//24 + yy//24) % 2 else "#ecd8b9")
+                box(p,xx+2,yy+3,4,4,"#e4c198")
+        box(p,296,198,246,150,"#b6ccaa")
+        for xx in range(298,540,32):
+            box(p,xx,200,2,147,"#e2edce")
+        for yy in range(200,347,32):
+            box(p,296,yy,246,2,"#e4e9c6")
+        rug(p,306,254,158,83,"#6f9377","#dde3c4")
+
     # Joined plaster partitions: draw beams only at genuine wall boundaries.
     # Keep the full old pathfinding footprint, remove Tetris-like tile seams.
     for x,y in walls:
@@ -161,6 +187,7 @@ def pixel_cottage(p, layout, walls):
     box(p,499,295,5,5,"#be8966")
     box(p,509,295,5,5,"#be8966")
     draw_room_vignettes(p, layout)
+    draw_upgrade_features(p, layout)
     # Small carved name plaques to replace large overlaid map captions.
     names = {
         "cottage": (("BEDROOM",48,59),("LIVING",320,54),("KITCHEN",40,207),("NURSERY",324,210)),
@@ -410,3 +437,54 @@ def draw_room_vignettes(p, layout):
         box(p,xx,yy,29,12,"#9c8468")
         box(p,xx+3,yy+3,23,6,"#e2ceb2")
     p.restore()
+
+
+def draw_upgrade_features(p, layout):
+    """Large, layout-specific interior elements independent of saved furniture."""
+    if layout == "open":
+        # Breakfast island sits under the missing central partitions; a
+        # warm lounge replaces the formerly divided kitchen/living corridor.
+        box(p,244,153,90,36,"#756049")
+        box(p,247,149,86,34,"#c09e72")
+        box(p,250,151,80,26,"#e7cba2")
+        box(p,260,157,23,13,"#e5ece0")
+        box(p,263,160,17,7,"#94bcb5")
+        box(p,298,157,21,15,"#8caf8a")
+        box(p,302,154,13,6,"#cfe0a9")
+        box(p,255,181,17,8,"#80664d")
+        box(p,308,181,17,8,"#80664d")
+        # Woven pouf and book basket give the great room recognizable purpose.
+        box(p,217,80,31,25,"#9b825b")
+        box(p,221,84,23,17,"#dfc79c")
+        for xx in (223,229,235):
+            box(p,xx,85,2,14,"#ac8f6f")
+        box(p,493,171,29,13,"#7b624d")
+        for xx,col in ((497,"#e6cb97"),(503,"#7fa08e"),(509,"#bc967e")):
+            box(p,xx,165,5,16,col)
+        # Strongly different arch treatment; no illusion of four closed rooms.
+        for x in (187,353):
+            box(p,x,186,8,23,"#d6bc91")
+            box(p,x,186,8,5,"#f5deb1")
+    elif layout == "garden":
+        # Vertical greenhouse glazing and decorative espalier plant wall.
+        for xx in (308,360,412,464,516):
+            box(p,xx,201,39,8,"#a4c7b1")
+            box(p,xx+4,203,31,4,"#f2efca")
+            box(p,xx+17,208,4,25,"#4c866d")
+            box(p,xx+5,219,12,11,"#6d9f72")
+            box(p,xx+22,214,10,12,"#95ba79")
+        # A water bowl and a lily pad make the garden feel different.
+        p.setPen(QColor("#77999a"));p.setBrush(QColor("#8ebbb3"))
+        p.drawEllipse(249,258,43,36)
+        p.setPen(QColor("#d5e8c8"));p.drawEllipse(254,262,33,27)
+        box(p,263,269,18,7,"#6fa285")
+        box(p,278,265,5,4,"#f5d5bc")
+        # Potted palms, seed tray, climbing vine and a garden bench.
+        for xx in (300,337,475):
+            plant(p,xx,302)
+        box(p,160,232,91,25,"#705a43")
+        box(p,164,229,83,24,"#a6b78b")
+        for xx in range(169,244,15):
+            box(p,xx,229,4,24,"#e1d9b4")
+        box(p,173,254,9,17,"#80604a")
+        box(p,227,254,9,17,"#80604a")
