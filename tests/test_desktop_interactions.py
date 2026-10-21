@@ -91,7 +91,7 @@ class DesktopInteractionTests(unittest.TestCase):
         self.lead.last_friend_interaction=time.monotonic()-40
         self.assertTrue(self.lead.pair_ready())
         with patch.object(self.lead.buddy,"advance"), \
-             patch("ghostpet.random.random",return_value=0.0):
+             patch("ghostpet.random.random",return_value=0.01):
             self.lead.animate()
         self.assertIn(self.lead.pair_interaction,("greet","nuzzle","play","chase"))
 
