@@ -6,6 +6,8 @@ from collections import deque
 
 from PySide6.QtCore import Qt, QTimer, QRect
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
+from cottage_art import pixel_cottage, cottage_item
+from pet_presence import current_pet
 from PySide6.QtWidgets import (QComboBox, QDialog, QHBoxLayout, QLabel,
                                QPushButton, QVBoxLayout, QWidget)
 
@@ -105,7 +107,8 @@ class HouseCanvas(QWidget):
         if self.dialog.state.location == "house" and self.dialog.state.egg_hatched:
             self.draw_pet(p)
         for housemate in self.dialog.state.adopted_pets or []:
-            self.draw_housemate(p, housemate)
+            if housemate.get("location", "house") == "house":
+                self.draw_housemate(p, housemate)
         if self.dialog.mode == "Decorate":
             p.setPen(QPen(QColor("#bdb1e0"), 1, Qt.PenStyle.DotLine))
             for x in range(1, W - 1):
@@ -115,102 +118,12 @@ class HouseCanvas(QWidget):
         p.end()
 
     def draw_floor(self, p):
-        """Warm woodland interior; grid exists for navigation, not floor appearance."""
-        # Continuous plank floors with subtle grain, not checkerboard cells.
-        layout = self.dialog.state.house_layout
-        p.fillRect(0, 0, W*TILE, H*TILE, QColor("#be986f"))
-        room_colors = (
-            (1, 1, 7, 5, "#d2ac82"),   # bedroom: honey pine
-            (9, 1, 8, 5, "#cda883"),   # living: oak
-            (1, 7, 7, 4, "#ccad88"),   # kitchen: cream oak
-            (9, 7, 8, 4, "#d5b591"),  # playroom/nursery: birch
-        )
-        for x, y, w, h, shade in room_colors:
-            p.fillRect(x*TILE, y*TILE, w*TILE, h*TILE, QColor(shade))
-            for yy in range(y*TILE, (y+h)*TILE, 24):
-                p.fillRect(x*TILE, yy, w*TILE, 2, QColor("#ad8564"))
-                for xx in range(x*TILE + ((yy//24)%2)*38, (x+w)*TILE, 85):
-                    p.fillRect(xx, yy+2, 2, 22, QColor("#b7906d"))
-        # Non-interactive, decorative furnishings soften the schematic plan.
-        p.fillRect(10*TILE, 2*TILE, 5*TILE, 3*TILE, QColor("#9caf8b"))
-        p.fillRect(10*TILE+7, 2*TILE+7, 5*TILE-14, 3*TILE-14, QColor("#d9d7ad"))
-        p.fillRect(11*TILE, 8*TILE, 4*TILE, 2*TILE, QColor("#e5cab0"))
-        p.fillRect(11*TILE+8, 8*TILE+8, 4*TILE-16, 2*TILE-16, QColor("#f5e8d3"))
-        p.fillRect(2*TILE, 8*TILE, 2*TILE, TILE, QColor("#9ab9ac"))
-        if layout == "open":
-            # The removed partitions make room for a generously sized lounge rug.
-            p.fillRect(7*TILE, 2*TILE, 4*TILE, 3*TILE, QColor("#b8c8a4"))
-            p.fillRect(7*TILE+9, 2*TILE+9, 4*TILE-18, 3*TILE-18, QColor("#e8d8b2"))
-        elif layout == "garden":
-            # Sunny indoor garden and terracotta conservatory floor accent.
-            p.fillRect(10*TILE, 7*TILE, 6*TILE, 4*TILE, QColor("#e2bf9a"))
-            for yy in range(7*TILE, 11*TILE, 23):
-                p.fillRect(10*TILE, yy, 6*TILE, 2, QColor("#ca9d77"))
-            for xx, yy in ((10, 8), (15, 8), (10, 10), (15, 10)):
-                p.fillRect(xx*TILE+8, yy*TILE+8, 15, 15, QColor("#7a9a6a"))
-                p.fillRect(xx*TILE+12, yy*TILE+5, 8, 8, QColor("#b5c99a"))
-        # Baseboards and shadowed partitions with clear gaps for doorways.
-        for x, y in self.dialog.wall_tiles():
-            px, py = x*TILE, y*TILE
-            p.fillRect(px, py, TILE, TILE, QColor("#7f755b"))
-            p.fillRect(px, py, TILE, 7, QColor("#e7d6b2"))
-            p.fillRect(px, py+7, TILE, 4, QColor("#a38c6c"))
-            p.fillRect(px, py+11, TILE, TILE-11, QColor("#bca783"))
-        # Simple windows and curtains.
-        for x, y in ((3,0),(13,0),(0,8),(17,8)):
-            px, py = x*TILE, y*TILE
-            p.fillRect(px+5,py+5,22,21,QColor("#eff0c9"))
-            p.fillRect(px+8,py+7,16,17,QColor("#96c2c1"))
-            p.fillRect(px+15,py+7,2,17,QColor("#fff1d5"))
-            p.fillRect(px+6,py+5,4,21,QColor("#d1e2b4"))
-            p.fillRect(px+23,py+5,3,21,QColor("#d1e2b4"))
-        # Doorway thresholds are cosmetic; actual collision comes from wall_tiles.
-        for x,y in ((8,3),(8,4),(8,8),(3,6),(4,6),(12,6),(13,6)):
-            p.fillRect(x*TILE, y*TILE+TILE-5, TILE, 5, QColor("#8b755b"))
-        p.setFont(QFont("Sans", 9, QFont.Weight.Bold))
-        p.setPen(QColor("#5d5545"))
-        room_labels = {
-            "cottage": (("BEDROOM",2,1),("LIVING ROOM",10,1),
-                        ("KITCHEN",2,7),("PLAYROOM / NURSERY",10,7)),
-            "open": (("SLEEPING NOOK",2,1),("OPEN LOUNGE",10,1),
-                     ("KITCHEN",2,7),("PLAYROOM",11,7)),
-            "garden": (("BEDROOM",2,1),("SUNNY LOUNGE",10,1),
-                       ("KITCHEN / DINING",2,7),("INDOOR GARDEN",11,7)),
-        }
-        for label,x,y in room_labels.get(layout, room_labels["cottage"]):
-            p.drawText(x*TILE, y*TILE+15, label)
+        # Beautiful original painter-based cottage art, independent from navigation.
+        pixel_cottage(p, self.dialog.state.house_layout, self.dialog.wall_tiles())
 
     def draw_furniture(self, p, px, py, item):
-        if item not in ITEMS:
-            return
-        color = QColor(ITEMS[item][2])
-        outline = QColor("#33334d")
-        p.fillRect(px + 4, py + 7, 24, 20, outline)
-        p.fillRect(px + 6, py + 9, 20, 16, color)
-        if item == "bed":
-            p.fillRect(px + 8, py + 10, 16, 7, QColor("#fff4df"))
-            p.fillRect(px + 8, py + 19, 16, 4, QColor("#e995b9"))
-        elif item == "sofa":
-            p.fillRect(px + 8, py + 13, 16, 3, QColor("#d5e8ff"))
-            p.fillRect(px + 5, py + 18, 22, 5, QColor("#597ca2"))
-        elif item == "rug":
-            p.fillRect(px + 8, py + 11, 16, 12, QColor("#e4d3f9"))
-        elif item == "plant":
-            p.fillRect(px + 11, py + 19, 10, 6, QColor("#bd7d6c"))
-            p.fillRect(px + 8, py + 11, 16, 11, QColor("#5caa76"))
-        elif item == "toy":
-            p.fillRect(px + 10, py + 11, 12, 13, QColor("#b78257"))
-            p.fillRect(px + 8, py + 9, 5, 6, QColor("#d8a66e"))
-            p.fillRect(px + 20, py + 9, 5, 6, QColor("#d8a66e"))
-        elif item == "ball":
-            p.fillRect(px + 10, py + 10, 12, 13, QColor("#f6d280"))
-            p.fillRect(px + 15, py + 10, 3, 13, QColor("#e69fbd"))
-        elif item == "bowl":
-            p.fillRect(px + 7, py + 15, 18, 8, QColor("#e7c3ab"))
-            p.fillRect(px + 10, py + 15, 12, 3, QColor("#8c5c45"))
-        elif item == "lamp":
-            p.fillRect(px + 14, py + 15, 4, 9, QColor("#c7c4df"))
-            p.fillRect(px + 9, py + 9, 14, 9, QColor("#fff0b0"))
+        if item in ITEMS:
+            cottage_item(p, px, py, item, ITEMS[item][2])
 
     def draw_housemate(self, p, pet):
         """Small, species-specific pixel silhouettes for nursery pets."""
@@ -294,7 +207,7 @@ class HouseDialog(QDialog):
             self.state.housewarming_granted = True
             self.save()
         self._migrate_old_room()
-        self.setWindowTitle("GhostPet • Woodland Cottage v0.5.3")
+        self.setWindowTitle("GhostPet • Cozy Cottage v0.6")
         self.setStyleSheet("""QDialog{background:#f1e4d2;color:#443e31}
 QLabel{color:#443e31;font-size:13px}
 QPushButton,QComboBox{background:#759278;color:white;border:1px solid #55735b;
@@ -404,7 +317,8 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         return min(possible, key=lambda cell: abs(cell[0]-tile[0])+abs(cell[1]-tile[1])) if possible else (2,3)
 
     def travel(self):
-        if self.state.location == "house":
+        # Only one household member can walk on the desktop at a time.
+        if current_pet(self.state) is False:
             self.return_home()
         else:
             self.send_home()
@@ -440,7 +354,8 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
 
     def refresh(self):
         self.balance.setText(f"🪙 {self.state.coins}")
-        self.door_button.setText("↗ Visit desktop" if self.state.location == "house" else "⌂ Walk inside")
+        self.door_button.setText("↗ Bring selected pet outside" if current_pet(self.state) is False
+                                else "⌂ Send desktop pet home")
         self.update_layout_button()
         self.canvas.update()
 
@@ -507,7 +422,7 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         # Housemates keep exploring even when the founder is outside.
         occupied = self.blocked()
         for pet in self.state.adopted_pets or []:
-            if random.random() < .18:
+            if pet.get("location", "house") == "house" and random.random() < .18:
                 x, y = int(pet.get("x",12)), int(pet.get("y",8))
                 options = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
                 options = [(a,b) for a,b in options if 0<a<W-1 and 0<b<H-1
