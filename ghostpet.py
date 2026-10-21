@@ -404,6 +404,9 @@ def clamp(value: float, minimum: float = 0, maximum: float = 100) -> float:
 CURSOR_GAP = 30  # The pointer remains outside the pet window, not underneath it.
 CURSOR_CHASE_SECONDS = 8.0
 CURSOR_CHASE_COOLDOWN = 75.0
+CURSOR_CATCH_DISTANCE = 11
+CURSOR_CATCH_HOLD_SECONDS = .38  # Let a patient pet pounce once the pointer slows.
+CURSOR_POINTER_MOVEMENT_TOLERANCE = 8
 
 
 def cursor_chase_destination(window, cursor, screen, gap=CURSOR_GAP):
@@ -1367,6 +1370,10 @@ class RoamingPet(QWidget):
         self.cursor_chaser_id = NONE
         self.cursor_chase_until = 0.0
         self.last_cursor_chase = time.monotonic()
+        self.cursor_last_pos = None
+        self.cursor_still_since = 0.0
+        self.cursor_catch_pet_id = NONE
+        self.cursor_catch_until = 0.0
         self.setWindowTitle("GhostPet")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool |
                             Qt.WindowType.WindowStaysOnTopHint)
@@ -1508,6 +1515,10 @@ class RoamingPet(QWidget):
         self.cursor_chaser_id = pet_id
         self.cursor_chase_until = time.monotonic() + CURSOR_CHASE_SECONDS
         self.last_cursor_chase = time.monotonic()
+        self.cursor_last_pos = None
+        self.cursor_still_since = 0.0
+        self.cursor_catch_pet_id = NONE
+        self.cursor_catch_until = 0.0
         if self.console and manual:
             self.console.hide()
         self.say(random.choice([
@@ -1519,26 +1530,51 @@ class RoamingPet(QWidget):
         self.buddy.update()
         return True
 
-    def stop_cursor_chase(self, celebrate=True):
+    def stop_cursor_chase(self, celebrate=True, caught=False):
+        """Finish exactly once. Caught means a winning paw-pounce beside pointer."""
         if self.cursor_chaser_id == NONE:
             return
         pet_id = self.cursor_chaser_id
         self.cursor_chaser_id = NONE
         self.cursor_chase_until = 0.0
         self.last_cursor_chase = time.monotonic()
+        self.cursor_last_pos = None
+        self.cursor_still_since = 0.0
+        if caught:
+            self.cursor_catch_pet_id = pet_id
+            self.cursor_catch_until = time.monotonic()+1.8
+        else:
+            self.cursor_catch_pet_id = NONE
+            self.cursor_catch_until = 0.0
         if celebrate:
             pet = find_adopted(self.state,pet_id)
+            happiness = 6 if caught else 2
             if pet_id == FOUNDER:
-                self.state.happiness = clamp(self.state.happiness+2)
+                self.state.happiness = clamp(self.state.happiness+happiness)
             elif pet:
-                pet["happiness"] = clamp(float(pet.get("happiness",80))+2)
-            self.say("Aw, it got away! 😂")
+                pet["happiness"] = clamp(float(pet.get("happiness",80))+happiness)
+            if caught:
+                # The tiny trophy comes from succeeding, not from clicking UI.
+                self.state.coins += 2
+                self.say(random.choice([
+                    "GOTCHA! 🐾✨",
+                    "I CAUGHT THE MOUSE! 😼",
+                    "POUNCE! Mine now! ♡",
+                ]))
+            else:
+                self.say("Aw, it got away! 😂")
             self.persist()
+            if self.console and self.console.isVisible():
+                self.console.refresh()
         self.update()
         self.buddy.update()
 
     def advance_cursor_chase(self, cursor=None):
-        """Move only the pet window, staying a window-width from the pointer."""
+        """Safely approach a pointer and catch it virtually when it slows.
+
+        The *pet* only reaches to the existing safety gap; no pointer events
+        are sent and the pet never needs to obscure a real on-screen click.
+        """
         pet_id = self.cursor_chaser_id
         if pet_id == NONE:
             return
@@ -1557,7 +1593,17 @@ class RoamingPet(QWidget):
         geom = QApplication.primaryScreen().availableGeometry()
         pointer = QCursor.pos() if cursor is None else cursor
         if not geom.contains(pointer):
+            self.cursor_still_since = 0.0
+            self.cursor_last_pos = None
             return
+        now = time.monotonic()
+        if self.cursor_last_pos is None or (
+            (pointer-self.cursor_last_pos).manhattanLength()
+                > CURSOR_POINTER_MOVEMENT_TOLERANCE):
+            self.cursor_still_since = now
+        elif not self.cursor_still_since:
+            self.cursor_still_since = now
+        self.cursor_last_pos = QPoint(pointer)
         window = self if pet_id == self.state.desktop_pet_id else self.buddy
         target = cursor_chase_destination(window,pointer,geom)
         if target is None:
@@ -1571,6 +1617,15 @@ class RoamingPet(QWidget):
             if step_x:
                 window.facing = 1 if step_x > 0 else -1
             window.update()
+
+        # The paw can touch across a small *virtual* gap: cursor accessibility
+        # stays intact while the cat genuinely wins the chase.
+        close_enough = (
+            abs(target.x()-window.x()) <= CURSOR_CATCH_DISTANCE and
+            abs(target.y()-window.y()) <= CURSOR_CATCH_DISTANCE)
+        if (close_enough and self.cursor_still_since and
+                now-self.cursor_still_since >= CURSOR_CATCH_HOLD_SECONDS):
+            self.stop_cursor_chase(caught=True)
 
     def maybe_start_cursor_chase(self):
         """Short, infrequent spontaneous curiosity, separate from duo play."""
