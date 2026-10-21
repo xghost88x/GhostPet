@@ -231,3 +231,156 @@ def cottage_item(p, px, py, item, tint):
         box(p,px+7,py+7,19,12,"#f4dba1")
         box(p,px+9,py+9,15,8,"#fff0c5")
         box(p,px+13,py+4,7,3,"#9c8c6f")
+
+
+def built_in_occupied(layout):
+    """Reserved cells for built-in furnishings; kept away from every doorway."""
+    tiles = {
+        (4,2),(5,2),(4,3),(5,3),(4,4),(5,4),  # bedroom quilted bed
+        (10,3),(11,3),(12,3),(10,4),(11,4),  # living room couch
+        (1,8),(1,9),(1,10),                   # kitchen wall pantry
+        (5,9),(6,9),                          # dining table
+        (15,8),(16,8),(15,9),(16,9),          # nursery / garden structure
+    }
+    return tiles
+
+
+def draw_room_vignettes(p, layout):
+    """Recognizable, larger-than-one-tile furnishings for a lived-in cottage."""
+    # Distinct bedside furniture, a quilted double bed and a framed painting.
+    box(p,136,66,80,92,"#74553e")
+    box(p,132,61,80,92,"#b78d62")
+    box(p,139,68,66,82,"#ecdcbd")
+    box(p,142,71,60,22,"#fff4df")
+    box(p,145,73,25,17,"#fffaf0")
+    box(p,174,73,25,17,"#efe2d5")
+    box(p,141,94,62,54,"#789b83")
+    for yy in (97,114,131):
+        for xx in (145,164,183):
+            shade = "#c5d4b5" if (xx+yy)//17%2 else "#e5c7ac"
+            box(p,xx,yy,17,14,shade)
+            box(p,xx+6,yy+5,5,4,"#f5e2c3")
+    box(p,141,147,63,4,"#526c57")
+    box(p,139,151,9,5,"#614e40")
+    box(p,199,151,9,5,"#614e40")
+    box(p,217,106,26,24,"#7c5b46")    # nightstand
+    box(p,219,104,22,19,"#be9169")
+    box(p,227,97,7,11,"#987c63")
+    box(p,224,90,15,9,"#f5d7a1")
+    box(p,227,92,8,6,"#fff2cc")
+    box(p,56,49,48,23,"#7b604a")      # landscape painting
+    box(p,59,52,42,17,"#ddcbac")
+    box(p,62,54,36,12,"#a1c0b7")
+    box(p,67,60,29,6,"#71927c")
+    box(p,83,54,6,5,"#f9e5b7")
+    box(p,68,147,26,21,"#936f4d")     # woven basket
+    for xx in (72,79,86):
+        box(p,xx,151,2,14,"#e2bd89")
+    for xx in (106,124):               # soft slippers
+        box(p,xx,155,13,6,"#e4ceb2")
+
+    # Proper upholstered 3-seat couch and round tea table.
+    box(p,326,100,127,63,"#4f685b")
+    box(p,335,91,110,63,"#709580")
+    box(p,339,95,102,25,"#8daa95")
+    for xx in (341,374,407):
+        box(p,xx,104,31,32,"#b6cdb5")
+        box(p,xx+4,107,24,24,"#d2dfca")
+        box(p,xx+11,110,9,3,"#f4e7d3")
+    box(p,336,136,105,17,"#5d7d6a")
+    box(p,325,110,14,42,"#597663")
+    box(p,441,110,14,42,"#597663")
+    for xx in (329,441):
+        box(p,xx,157,11,7,"#634a3b")
+    p.setPen(QColor("#74563f"));p.setBrush(QColor("#846048"))
+    p.drawEllipse(465,115,58,43)
+    p.setPen(QColor("#d6ac80"));p.setBrush(QColor("#caa47a"))
+    p.drawEllipse(462,110,58,43)
+    p.setPen(QColor("#f1d9b5"));p.drawEllipse(468,115,46,32)
+    box(p,481,126,13,8,"#f9efe2")
+    box(p,486,125,4,3,"#9aab86")
+    box(p,500,133,10,6,"#e6d4bd")
+    box(p,502,132,6,2,"#a28c75")
+    box(p,467,42,43,29,"#80634d")    # botanical wall art
+    box(p,471,46,35,21,"#c9dabb")
+    box(p,473,48,31,17,"#8aafaf")
+    box(p,475,57,29,7,"#588572")
+    box(p,484,48,7,6,"#fae6a9")
+
+    # Kitchen: three-door pantry, copper cookware and dining nook.
+    box(p,35,241,39,97,"#765640")
+    box(p,38,244,32,90,"#b9946b")
+    for yy in (248,278,307):
+        box(p,41,yy,26,23,"#e2c6a1")
+        box(p,61,yy+12,3,5,"#927257")
+    box(p,73,287,15,34,"#f2e7cf")    # dishcloth
+    for xx in (76,84):
+        box(p,xx,290,3,27,"#a4b9a6")
+    box(p,94,235,76,4,"#806045")    # hanging copper pots
+    for xx in (98,123,148):
+        box(p,xx+6,239,3,6,"#6e5442")
+        box(p,xx,245,19,13,"#af7050")
+        box(p,xx+2,247,15,8,"#dd9e69")
+    p.setPen(QColor("#76563e"));p.setBrush(QColor("#97704f"))
+    p.drawEllipse(163,265,62,25)        # chair above
+    p.drawEllipse(163,322,62,19)        # chair below
+    p.setPen(QColor("#b78e6a"));p.setBrush(QColor("#bb956d"))
+    p.drawEllipse(172,273,55,46)        # dining table
+    p.setPen(QColor("#e9ceaa"));p.setBrush(QColor("#e4bf95"))
+    p.drawEllipse(176,276,47,39)
+    box(p,184,289,12,8,"#f6ebd4")     # plates and tea
+    box(p,203,290,11,7,"#f7e3cd")
+    box(p,205,288,6,2,"#998066")
+    box(p,188,287,4,2,"#83a783")
+
+    if layout == "garden":
+        # The premium layout replaces nursery furnishings with a conservatory.
+        for xx in (328,374,420,466):
+            box(p,xx,239,39,5,"#806b4d")
+            box(p,xx+3,244,33,16,"#a6c09e")
+            for leaf in (0,10,20):
+                box(p,xx+5+leaf,231,8,11,"#5e8f65")
+                box(p,xx+7+leaf,227,4,7,"#a1c88e")
+        box(p,488,268,50,66,"#725a42")
+        box(p,492,272,42,56,"#ad8660")
+        for xx in (495,508,521):
+            for yy in (276,295,314):
+                box(p,xx,yy,8,11,"#5a9369")
+                box(p,xx+3,yy-3,5,6,"#9bbb86")
+        box(p,366,296,69,30,"#907455")
+        box(p,370,290,61,29,"#c7b496")
+        box(p,375,295,51,20,"#eee0bf")
+        box(p,380,302,12,5,"#f6edcf")
+    else:
+        # Crib with wooden railings, teddy bear, toy shelves and pet cushion.
+        box(p,475,246,63,77,"#806249")
+        box(p,479,249,55,71,"#d9b28a")
+        box(p,485,252,43,52,"#d8dbce")
+        box(p,488,254,37,44,"#a8c0ac")
+        box(p,490,255,33,12,"#fff0d7")
+        for xx in range(483,532,7):
+            box(p,xx,302,3,15,"#a9825f")
+        box(p,480,317,53,4,"#715b49")
+        box(p,316,249,62,33,"#947458")
+        box(p,320,252,54,26,"#cba37e")
+        for xx,c in ((323,"#adc7a6"),(341,"#eac99f"),(359,"#d4bfd3")):
+            box(p,xx,261,12,12,c)
+            box(p,xx+2,263,4,4,"#fff4db")
+        p.setPen(QColor("#a68f81"));p.setBrush(QColor("#f0d3b4"))
+        p.drawEllipse(378,296,62,31)
+        p.setPen(QColor("#b68b67"));p.setBrush(QColor("#c39a70"))
+        p.drawEllipse(390,267,26,25)
+        box(p,385,266,8,9,"#c39a70")
+        box(p,413,266,8,9,"#c39a70")
+        box(p,396,280,3,3,"#453a34")
+        box(p,409,280,3,3,"#453a34")
+        box(p,403,285,3,3,"#715043")
+
+    # Cozy small touches: overhead lamps and a welcome runner.
+    for xx,yy in ((218,41),(512,187),(165,204)):
+        box(p,xx,yy,4,8,"#937458")
+        box(p,xx-8,yy+8,21,11,"#f0d09a")
+        box(p,xx-5,yy+9,15,9,"#fff0bc")
+    for xx,yy in ((245,113),(95,195),(403,195)):
+        box(p,xx,yy,29,12,"#9c8468")
+        box(p,xx+3,yy+3,23,6,"#e2ceb2")
