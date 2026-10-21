@@ -1,8 +1,18 @@
-# GhostPet v0.7.1 Preview — Interactive Desktop Buddies
+# GhostPet v0.7.2 Preview — Autonomous Antics & Refillable Food Bowls
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.7.2
+
+**More than manual nuzzling:** Two pets now independently start one of **eight timed social activities**: greeting, nuzzling, bouncing play, chasing/tag, high-fives, synchronized dancing, peekaboo, and sharing snacks. The second pet visibly moves toward their partner, hops/dances, or hides and reappears during peekaboo. The pet's speech bubble and little hearts/symbols respond to the activity. When an interaction finishes, its pair's friendship meter improves once; energetic activities also influence their happiness/energy. The approved original Founder sprite remains untouched.
+
+Spontaneous social encounters are **enabled by default** and can start roughly every 17+ seconds when two awake, free-roaming pets are near each other. The exact timing varies. Pocket Care now includes **✨ Auto interactions: On/Off**, **🎲 Surprise!**, **🎾 Play Together** and **♡ Nuzzle** inside the collapsible section. Disabling automatic encounters does not disable manual play. Dragging, sleeping or going home interrupts unfinished interactions safely.
+
+**Actual house food bowls:** Buy/place the **Food bowl (8 coins)** in House → Decorate if you don't already own one. Each placed bowl holds **six meals**; the number of portions is visible on the furniture and in a new **🥣 Food bowls** counter above the canvas. Press **🥣 Refill bowls** to refill all placed bowls, or in Explore mode click one bowl to top up that bowl. Refilling is free in this preview. Hungry pets who stay indoors walk toward bowls, eat, use up one portion, and gain **26 hunger (fullness) points**, capped at 100, with a 60-second cooldown per pet. Pets indoors can also eat while the house window is closed *if Ghost Pet is running*; outdoor pets can't consume house food. Empty bowls can't feed until refilled. Each old bowl starts full when upgrading. Existing bowl placements, furniture, pets, coins and unlocked cottages are preserved.
+
+Added offscreen Qt tests for all eight duo actions, rewards, automatic-play toggle, bowl migration, refills, portions, indoor-only feeding, cooldowns and preserving food across layout upgrades.
 
 ## What's new in v0.7.1
 
