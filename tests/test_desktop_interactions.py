@@ -111,13 +111,20 @@ class DesktopInteractionTests(unittest.TestCase):
                 self.assertEqual(relationship_score(self.state,"founder","cat1"),after)
 
     def test_auto_interactions_can_be_disabled_without_disabling_manual_play(self):
-        self.lead.state.auto_social=False
+        self.assertTrue(self.lead.state.auto_social)
+        self.lead.console.auto_social_button.click()
+        self.assertFalse(self.lead.state.auto_social)
+        self.assertIn("Off",self.lead.console.auto_social_button.text())
         self.lead.buddy.move(self.lead.x()+50,self.lead.y())
         self.lead.last_friend_interaction=0
         with patch("ghostpet.random.random",return_value=0):
             self.assertFalse(self.lead.maybe_start_auto_interaction())
         self.assertIsNone(self.lead.pair_interaction)
         self.assertTrue(self.lead.start_pair_interaction("dance"))
+        self.lead.pair_interaction_until=time.monotonic()-1
+        self.lead.advance_pair_interaction()
+        self.lead.console.auto_social_button.click()
+        self.assertTrue(self.lead.state.auto_social)
 
     def test_art_has_no_room_name_text(self):
         art = (Path(__file__).resolve().parents[1] / "cottage_art.py").read_text()
