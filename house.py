@@ -294,7 +294,7 @@ class HouseDialog(QDialog):
             self.state.housewarming_granted = True
             self.save()
         self._migrate_old_room()
-        self.setWindowTitle("GhostPet • Woodland Cottage v0.5.2")
+        self.setWindowTitle("GhostPet • Woodland Cottage v0.5.3")
         self.setStyleSheet("""QDialog{background:#f1e4d2;color:#443e31}
 QLabel{color:#443e31;font-size:13px}
 QPushButton,QComboBox{background:#759278;color:white;border:1px solid #55735b;
