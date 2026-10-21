@@ -1319,6 +1319,9 @@ class RoamingPet(QWidget):
         self.pair_interaction_until = 0.0
         self.pair_interaction_pair = ()
         self.pair_started_at = 0.0
+        self.cursor_chaser_id = NONE
+        self.cursor_chase_until = 0.0
+        self.last_cursor_chase = time.monotonic()
         self.setWindowTitle("GhostPet")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool |
                             Qt.WindowType.WindowStaysOnTopHint)
@@ -1425,6 +1428,121 @@ class RoamingPet(QWidget):
         self.bubble_text = text[:80]
         self.bubble_until = time.monotonic() + 5
         self.update()
+
+    def cursor_pet_ready(self, pet_id):
+        """Cursor games can be enjoyed by either pet, including a solo mouse."""
+        if pet_id not in active_desktop_ids(self.state):
+            return False
+        if self.going_home or self.pair_interaction or self.cuddle_mode:
+            return False
+        if self.dragging or self.buddy.drag_start is not None:
+            return False
+        pet = find_adopted(self.state, pet_id)
+        sleeping = (self.state.sleeping if pet_id == FOUNDER
+                    else pet.get("sleeping",False) if pet else True)
+        if sleeping:
+            return False
+        if pet_id == self.state.desktop_pet_id:
+            return self.isVisible()
+        return self.buddy.isVisible()
+
+    def start_cursor_chase(self, pet_id=None, manual=False):
+        """An eight-second game; NEVER move or click the actual OS pointer."""
+        pet_id = pet_id or self.state.desktop_pet_id
+        if self.cursor_chaser_id != NONE or not self.cursor_pet_ready(pet_id):
+            if manual and self.console:
+                self.console.tip.setText(
+                    "Choose an awake roaming pet that isn't busy playing.")
+            return False
+        self.cursor_chaser_id = pet_id
+        self.cursor_chase_until = time.monotonic() + CURSOR_CHASE_SECONDS
+        self.last_cursor_chase = time.monotonic()
+        if self.console and manual:
+            self.console.hide()
+        self.say(random.choice([
+            "OH! THE MOUSE IS MOVING! 🐭",
+            "Wait! Come back, pointer!",
+            "I'M GONNA GET IT! ♡",
+        ]))
+        self.update()
+        self.buddy.update()
+        return True
+
+    def stop_cursor_chase(self, celebrate=True):
+        if self.cursor_chaser_id == NONE:
+            return
+        pet_id = self.cursor_chaser_id
+        self.cursor_chaser_id = NONE
+        self.cursor_chase_until = 0.0
+        self.last_cursor_chase = time.monotonic()
+        if celebrate:
+            pet = find_adopted(self.state,pet_id)
+            if pet_id == FOUNDER:
+                self.state.happiness = clamp(self.state.happiness+2)
+            elif pet:
+                pet["happiness"] = clamp(float(pet.get("happiness",80))+2)
+            self.say("Aw, it got away! 😂")
+            self.persist()
+        self.update()
+        self.buddy.update()
+
+    def advance_cursor_chase(self, cursor=None):
+        """Move only the pet window, staying a window-width from the pointer."""
+        pet_id = self.cursor_chaser_id
+        if pet_id == NONE:
+            return
+        if time.monotonic() >= self.cursor_chase_until:
+            self.stop_cursor_chase()
+            return
+        if not self.cursor_pet_ready(pet_id):
+            self.stop_cursor_chase(celebrate=False)
+            return
+        if self.console and self.console.isVisible():
+            self.stop_cursor_chase(celebrate=False)
+            return
+        if self.house_dialog and self.house_dialog.isVisible():
+            self.stop_cursor_chase(celebrate=False)
+            return
+        geom = QApplication.primaryScreen().availableGeometry()
+        pointer = QCursor.pos() if cursor is None else cursor
+        if not geom.contains(pointer):
+            return
+        window = self if pet_id == self.state.desktop_pet_id else self.buddy
+        target = cursor_chase_destination(window,pointer,geom)
+        if target is None:
+            return
+        delta_x = target.x()-window.x()
+        delta_y = target.y()-window.y()
+        step_x = max(-7,min(7,delta_x))
+        step_y = max(-5,min(5,delta_y))
+        if step_x or step_y:
+            window.move(window.x()+step_x,window.y()+step_y)
+            if step_x:
+                window.facing = 1 if step_x > 0 else -1
+            window.update()
+
+    def maybe_start_cursor_chase(self):
+        """Short, infrequent spontaneous curiosity, separate from duo play."""
+        if not self.state.auto_cursor_chase or self.cursor_chaser_id != NONE:
+            return False
+        if self.console and self.console.isVisible():
+            return False
+        if self.house_dialog and self.house_dialog.isVisible():
+            return False
+        if time.monotonic()-self.last_cursor_chase < CURSOR_CHASE_COOLDOWN:
+            return False
+        geom = QApplication.primaryScreen().availableGeometry()
+        if not geom.contains(QCursor.pos()):
+            return False
+        candidates = [p for p in active_desktop_ids(self.state)
+                      if self.cursor_pet_ready(p)]
+        if not candidates or random.random() >= .007:
+            return False
+        # Cats are especially tempted by the moving pointer.
+        weights = [4 if (find_adopted(self.state,p) or {}).get("species")=="Cat"
+                   else 1 for p in candidates]
+        chosen = random.choices(candidates,weights=weights,k=1)[0]
+        return self.start_cursor_chase(chosen)
 
     def pair_ready(self):
         """Both desktop pets must exist and be awake before playing."""
