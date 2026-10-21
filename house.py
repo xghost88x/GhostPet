@@ -465,23 +465,25 @@ LAYOUTS = {
 
 
 def walls_for_layout(layout):
-    """Three genuinely different, walkable internal cottage floor plans.
+    """Truly different plans within the same exterior footprint.
 
-    The exterior footprint never changes, so saves and window sizing remain
-    stable; wider archways replace structural partitions on paid upgrades.
+    Woodland has four fully partitioned rooms. Open Plan has one secluded
+    bedroom nook and a connected kitchen/lounge. Sunny Garden is a mostly
+    uninterrupted conservatory with only a few structural glasshouse posts.
+    Existing pets and placed furniture are reflowed on a layout switch.
     """
-    changed = set(WALLS)
-    if layout in ("open", "garden"):
-        # Open upper lounge into the bedroom and replace most of the long
-        # central hallway with archways. End posts remain as visual columns.
-        changed.difference_update({(8, y) for y in (2, 3, 4, 5)})
-        changed.difference_update({(x, 6) for x in
-                                   (2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15)})
+    exterior = {(x,0) for x in range(W)} | {(x,H-1) for x in range(W)}
+    exterior |= {(0,y) for y in range(H)} | {(W-1,y) for y in range(H)}
+    if layout == "open":
+        # Small private sleeping nook upper-left. Everything else is open.
+        partition = {(6,y) for y in (1,2,4,5)}
+        partition |= {(x,5) for x in (1,2,3,5,6)}
+        return exterior | partition
     if layout == "garden":
-        # Conservatory is truly open to the whole home, not just a colorway.
-        changed.difference_update({(8, y) for y in range(1, H-1)})
-        changed.difference_update({(8, 6), (9, 6), (1, 6), (16, 6)})
-    return changed
+        # Atrium posts, not the old cottage's interior walls.
+        return exterior | {(12,1),(12,2),(12,9),(12,10)}
+    return set(WALLS)
+
 
 def path_between(start, goal, blocked=frozenset(), wall_tiles=None):
     """Four-directional shortest walk; returns [] if the target cannot be reached."""
