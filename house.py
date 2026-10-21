@@ -395,33 +395,35 @@ class HouseCanvas(QWidget):
         p.fillRect(px+17,py+12,3,4,dark)
 
     def draw_pet(self, p):
-        x, y = self.dialog.position
-        px, py = x*TILE + 3, y*TILE + 2
-        species = self.dialog.state.species
-        tint = QColor({"Ghost":"#e2ccff", "Cat":"#f3d6a5", "Dog":"#c8a781",
-                       "Bunny":"#f4e8de", "Fox":"#f2a773", "Dragon":"#91dcab"}.get(species,"#e2ccff"))
-        p.fillRect(px + 4, py + 3, 18, 20, QColor("#262a49"))
-        p.fillRect(px + 6, py + 2, 14, 19, tint)
-        p.fillRect(px + 4, py + 9, 18, 11, tint)
-        p.fillRect(px + 4, py + 20, 6, 4, tint)
-        p.fillRect(px + 16, py + 20, 6, 4, tint)
-        if species == "Bunny":
-            p.fillRect(px + 6, py - 5, 5, 10, tint)
-            p.fillRect(px + 18, py - 5, 5, 10, tint)
-        elif species in ("Cat", "Fox"):
-            p.fillRect(px + 5, py, 5, 6, tint)
-            p.fillRect(px + 18, py, 5, 6, tint)
-        elif species == "Dragon":
-            p.fillRect(px, py + 11, 7, 10, QColor("#5dae83"))
-            p.fillRect(px + 22, py + 11, 7, 10, QColor("#5dae83"))
-        p.fillRect(px + 9, py + 10, 3, 5, QColor("#28334d"))
-        p.fillRect(px + 17, py + 10, 3, 5, QColor("#28334d"))
-        p.fillRect(px + 6, py + 15, 3, 2, QColor("#f9a4c5"))
-        p.fillRect(px + 20, py + 15, 3, 2, QColor("#f9a4c5"))
+        """Miniature indoor version of the approved small Founder mouse."""
+        x,y = self.dialog.position
+        px,py = x*TILE+2,y*TILE+2
+        tint = QColor("#b8e7ce") if self.dialog.state.color=="Mint" else (
+            QColor("#d5bbef") if self.dialog.state.color=="Lilac" else QColor("#eac29d"))
+        outline = QColor("#485449")
+        blush = QColor("#e8afbc")
+        cream = QColor("#fff3db")
+        # Small thin tail and round ears; no large side limbs.
+        p.fillRect(px+23,py+16,5,3,outline)
+        p.fillRect(px+26,py+12,3,5,tint)
+        p.fillRect(px+5,py+3,8,8,outline)
+        p.fillRect(px+18,py+3,8,8,outline)
+        p.fillRect(px+7,py+5,4,4,blush)
+        p.fillRect(px+20,py+5,4,4,blush)
+        p.fillRect(px+6,py+11,20,15,outline)
+        p.fillRect(px+8,py+10,16,15,tint)
+        p.fillRect(px+10,py+22,12,4,cream)
+        p.fillRect(px+8,py+25,5,3,outline)
+        p.fillRect(px+19,py+25,5,3,outline)
+        p.fillRect(px+10,py+14,3,4,outline)
+        p.fillRect(px+19,py+14,3,4,outline)
+        p.fillRect(px+9,py+20,3,2,blush)
+        p.fillRect(px+21,py+20,3,2,blush)
+        p.fillRect(px+16,py+20,2,2,outline)
         if self.dialog.activity:
-            p.setPen(QColor("#fff3cc"))
-            p.setFont(QFont("monospace", 10, QFont.Weight.Bold))
-            p.drawText(px - 3, py - 1, "♥")
+            p.setPen(QColor("#e77b98"))
+            p.setFont(QFont("Sans",10,QFont.Weight.Bold))
+            p.drawText(px+7,py-2,"♥")
 
 
 class HouseDialog(QDialog):
