@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.6.1-preview — Responsive Update Center
+
+- Replace the unresponsive updater worker thread with a separately monitored process.
+- Show the specific stage and elapsed time during update checks.
+- Add a safe cancellation button while downloading and a 95-second timeout before applying files.
+- Present actual network errors and a Retry option instead of hanging on “Getting the latest version”.
+- Preserve existing save backups, pet stats, desktop selection and v0.6 cottage artwork.
+- Add offscreen GUI tests for successful updates and GitHub connection failures.
+
+
 ## v0.6.0-preview — Cozy Cottage & Desktop Pet Selection
 
 - Rework the house's visual rendering with original wood planks, rugs, cozy decor, shelves, windows, plants, warm walls and redesigned little furniture.
