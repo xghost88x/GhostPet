@@ -284,7 +284,7 @@ class HouseDialog(QDialog):
         self.send_home = send_home
         self.mode = "Explore"
         self.position = (state.house_pet_x, state.house_pet_y)
-        if self.position in WALLS or not (0 <= self.position[0] < W and 0 <= self.position[1] < H):
+        if self.position in self.wall_tiles() or not (0 <= self.position[0] < W and 0 <= self.position[1] < H):
             self.position = (2, 3)
         self.path = []
         self.activity = ""
@@ -294,7 +294,7 @@ class HouseDialog(QDialog):
             self.state.housewarming_granted = True
             self.save()
         self._migrate_old_room()
-        self.setWindowTitle("GhostPet • Woodland Cottage v0.5.1")
+        self.setWindowTitle("GhostPet • Woodland Cottage v0.5.2")
         self.setStyleSheet("""QDialog{background:#f1e4d2;color:#443e31}
 QLabel{color:#443e31;font-size:13px}
 QPushButton,QComboBox{background:#759278;color:white;border:1px solid #55735b;
@@ -314,6 +314,19 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.door_button.clicked.connect(self.travel)
         bar.addWidget(self.door_button)
         body.addLayout(bar)
+        layout_row = QHBoxLayout()
+        layout_row.addWidget(QLabel("Cottage floor plan:"))
+        self.layout_selector = QComboBox()
+        for key, (label, price) in LAYOUTS.items():
+            suffix = " • owned" if key in self.state.unlocked_house_layouts else f" • {price} coins"
+            self.layout_selector.addItem(label + suffix, key)
+        self.layout_selector.setCurrentIndex(list(LAYOUTS).index(self.state.house_layout))
+        self.layout_selector.currentIndexChanged.connect(self.update_layout_button)
+        layout_row.addWidget(self.layout_selector)
+        self.layout_button = QPushButton("Use layout")
+        self.layout_button.clicked.connect(self.choose_layout)
+        layout_row.addWidget(self.layout_button)
+        body.addLayout(layout_row)
         self.canvas = HouseCanvas(self)
         body.addWidget(self.canvas)
         self.status = QLabel("Click a floor tile to guide your pet between rooms!")
@@ -322,6 +335,73 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(260)
         self.refresh()
+
+    def wall_tiles(self):
+        return walls_for_layout(self.state.house_layout)
+
+    def update_layout_button(self, _index=None):
+        key = self.layout_selector.currentData()
+        if key == self.state.house_layout:
+            text = "✓ Current layout"
+            enabled = False
+        elif key in self.state.unlocked_house_layouts:
+            text = "Switch layout"
+            enabled = True
+        else:
+            text = f"Unlock • {LAYOUTS[key][1]} coins"
+            enabled = True
+        self.layout_button.setText(text)
+        self.layout_button.setEnabled(enabled)
+
+    def choose_layout(self):
+        """Unlock and switch plans without altering the pet or furniture inventory."""
+        key = self.layout_selector.currentData()
+        if key not in LAYOUTS or key == self.state.house_layout:
+            return
+        new_walls = walls_for_layout(key)
+        # Switching back to a more divided home never deletes belongings.
+        hidden = [entry for entry in self.state.furniture
+                  if self.entry_tile(entry) in new_walls]
+        if hidden:
+            self.status.setText("Move furniture out of the future walls before changing plans.")
+            return
+        if key not in self.state.unlocked_house_layouts:
+            if key == "garden" and "open" not in self.state.unlocked_house_layouts:
+                self.status.setText("Unlock the Open Plan Cottage first.")
+                return
+            cost = LAYOUTS[key][1]
+            if self.state.coins < cost:
+                self.status.setText(f"Need {cost} coins to unlock this floor plan!")
+                return
+            self.state.coins -= cost
+            self.state.unlocked_house_layouts.append(key)
+        self.state.house_layout = key
+        self.position = self.safe_position(self.position, new_walls)
+        self.state.house_pet_x, self.state.house_pet_y = self.position
+        for pet in self.state.adopted_pets or []:
+            target = self.safe_position((int(pet.get("x",12)), int(pet.get("y",8))), new_walls)
+            pet["x"], pet["y"] = target
+        self.path = []
+        self.idle_ticks = 10
+        self.save()
+        self.layout_selector.blockSignals(True)
+        self.layout_selector.clear()
+        for item_key, (label, price) in LAYOUTS.items():
+            suffix = " • owned" if item_key in self.state.unlocked_house_layouts else f" • {price} coins"
+            self.layout_selector.addItem(label + suffix, item_key)
+        self.layout_selector.setCurrentIndex(list(LAYOUTS).index(key))
+        self.layout_selector.blockSignals(False)
+        self.status.setText(f"Welcome to your {LAYOUTS[key][0]}! Your pets and furnishings are safe.")
+        self.refresh()
+
+    def safe_position(self, tile, new_walls):
+        occupied = self.blocked()
+        if (0 < tile[0] < W-1 and 0 < tile[1] < H-1
+                and tile not in new_walls and tile not in occupied):
+            return tile
+        possible = [(x, y) for y in range(1, H-1) for x in range(1, W-1)
+                    if (x,y) not in new_walls and (x,y) not in occupied]
+        return min(possible, key=lambda cell: abs(cell[0]-tile[0])+abs(cell[1]-tile[1])) if possible else (2,3)
 
     def travel(self):
         if self.state.location == "house":
@@ -361,6 +441,7 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
     def refresh(self):
         self.balance.setText(f"🪙 {self.state.coins}")
         self.door_button.setText("↗ Visit desktop" if self.state.location == "house" else "⌂ Walk inside")
+        self.update_layout_button()
         self.canvas.update()
 
     def toggle_mode(self):
@@ -373,13 +454,13 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.canvas.update()
 
     def tile_clicked(self, tile):
-        if tile in WALLS or not (0 <= tile[0] < W and 0 <= tile[1] < H):
+        if tile in self.wall_tiles() or not (0 <= tile[0] < W and 0 <= tile[1] < H):
             self.status.setText("That's a wall. Try the floor or a doorway.")
             return
         if self.mode == "Decorate":
             self.place_item(tile)
             return
-        route = path_between(self.position, tile, self.blocked())
+        route = path_between(self.position, tile, self.blocked(), self.wall_tiles())
         if route or tile == self.position:
             self.path = route
             self.idle_ticks = 25
@@ -430,7 +511,7 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
                 x, y = int(pet.get("x",12)), int(pet.get("y",8))
                 options = [(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
                 options = [(a,b) for a,b in options if 0<a<W-1 and 0<b<H-1
-                           and (a,b) not in WALLS and (a,b) not in occupied]
+                           and (a,b) not in self.wall_tiles() and (a,b) not in occupied]
                 if options:
                     pet["x"], pet["y"] = random.choice(options)
         if self.state.location != "house":
@@ -445,9 +526,9 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
             self.activity = ""
         elif random.random() < .12:
             possible = [(x, y) for x in range(1, W-1) for y in range(1, H-1)
-                        if (x, y) not in WALLS and (x, y) not in self.blocked()]
+                        if (x, y) not in self.wall_tiles() and (x, y) not in self.blocked()]
             target = random.choice(possible)
-            self.path = path_between(self.position, target, self.blocked())
+            self.path = path_between(self.position, target, self.blocked(), self.wall_tiles())
             self.idle_ticks = 7
             self.activity = "exploring"
         else:
