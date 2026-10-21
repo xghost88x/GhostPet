@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.7.0-preview — Three Distinctly Designed Homes
+
+- Recompose Open Plan from scratch: cozy private nook, long kitchen wall, large breakfast island, open great room, L-shaped sofa and large pet corner. Do not reuse the Woodland living/kitchen/nursery vignette.
+- Recompose Sunny Garden from scratch: huge glazed conservatory, cedar deck, raised potting shelves, trellises, broad garden seating and a lily pond. Do not reuse the Woodland layout's room positions.
+- Give all three home upgrades truly different interior wall topology, with walkable doorways and accessible pet paths.
+- Preserve furniture inventories when switching layouts by gently moving any items colliding with newly installed partitions or fixed fittings, instead of blocking the upgrade.
+- Add regression tests that demand at least 43% changed sampled pixels between floor plans and confirm purchased furniture survives a renovation.
+- Retain two roaming desktop pets, the house/desktop friendship meters, original Founder mouse sprite, nursery, coins and save compatibility.
+
+
 ## v0.6.5-preview — Two Pets & Persistent Friendship
 
 - Add a second desktop pet window, with the same clickable care access, drag behavior, and independent saved desktop coordinates as the lead pet.
