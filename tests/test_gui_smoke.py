@@ -50,6 +50,10 @@ class GhostPetGuiSmokeTests(unittest.TestCase):
                 house.layout_button.click()
                 self.assertEqual(state.house_layout, "open", house.status.text())
                 self.assertEqual(state.coins, balance + 480)
+                self.assertEqual(len(state.furniture), 1)
+                self.assertEqual(state.furniture[0]["item"], "bed")
+                self.assertNotEqual(house.entry_tile(state.furniture[0]), (3,2),
+                                    "Bought furniture should move away from new built-ins")
                 self.assertIn("Open Plan", house.status.text())
                 house.layout_selector.setCurrentIndex(2)
                 house.layout_button.click()
