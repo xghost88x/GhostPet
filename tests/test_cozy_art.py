@@ -54,6 +54,49 @@ class SpriteAndArtTests(unittest.TestCase):
         self.assertNotEqual(samples[0],samples[2],
                             "Garden layout should visibly replace nursery furnishings")
 
+    def test_upgrades_have_substantial_visible_floor_changes(self):
+        rendered = []
+        for plan in ("cottage", "open", "garden"):
+            canvas = QImage(W*TILE, H*TILE, QImage.Format.Format_ARGB32)
+            canvas.fill(0)
+            painter = QPainter(canvas)
+            try:
+                pixel_cottage(painter, plan, walls_for_layout(plan))
+            finally:
+                painter.end()
+            rendered.append(canvas)
+
+        def difference(first, second):
+            changed = 0
+            total = 0
+            # Sample the real pixels, not only the layout key or labels.
+            for y in range(20, H*TILE-20, 5):
+                for x in range(20, W*TILE-20, 5):
+                    total += 1
+                    changed += first.pixel(x,y) != second.pixel(x,y)
+            return changed / total
+
+        self.assertGreater(difference(rendered[0],rendered[1]), .09,
+                           "Open Plan must be visibly different from Woodland")
+        self.assertGreater(difference(rendered[1],rendered[2]), .12,
+                           "Sunny Garden must be visibly different from Open Plan")
+
+    def test_desktop_cat_is_smaller_than_cottage_portal(self):
+        img = QImage(124, 116, QImage.Format.Format_ARGB32)
+        img.fill(0)
+        painter = QPainter(img)
+        try:
+            draw_adopted_pet(painter, 124, 116,
+                             {"species":"Cat","name":"Fuzz"}, 1, scale=2)
+        finally:
+            painter.end()
+        pixels = [(x,y) for y in range(116) for x in range(124)
+                  if img.pixelColor(x,y).alpha() > 0]
+        self.assertTrue(pixels)
+        self.assertLess(max(x for x,y in pixels)-min(x for x,y in pixels), 80)
+        self.assertLess(max(y for x,y in pixels)-min(y for x,y in pixels), 95)
+
+
 
 if __name__ == "__main__":
     unittest.main()
