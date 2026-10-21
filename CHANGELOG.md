@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8.0-beta — First Windows Tester Candidate
+
+- Begin a clean per-user Windows 10/11 beta distribution: 600 startup coins for brand-new Windows households and no developer save files included in packaging.
+- Use Windows-native application data paths and save file locks while keeping existing Linux saves and installer functional.
+- Include a self-contained Windows one-file game executable, independent upgrade utility, per-user desktop/Start Menu installer and tester readme.
+- Windows Pocket Care update launches a temporary external updater, retrieves the published Windows beta release, validates the ZIP's file list and SHA256 digest, backs up/replaces binaries and preserves user pet saves.
+- Add Windows tests for fresh and existing saves, the two-pet GUI, updater archive validation and safe data-preserving installation.
+- Keep current internal GhostPet naming pending a final public identity and branding review.
+
+
 ## v0.7.4-preview — The Pointer Can Be Caught
 
 - Add a win condition to the mouse-pointer chase after the pet reaches the safe 30px pointer gap and the cursor pauses for about 0.4 seconds.
