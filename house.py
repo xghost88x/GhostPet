@@ -33,11 +33,31 @@ def walls():
 
 
 WALLS = walls()
+LAYOUTS = {
+    "cottage": ("Woodland Cottage", 0),
+    "open": ("Open Plan Cottage", 120),
+    "garden": ("Sunny Garden Cottage", 260),
+}
 
 
-def path_between(start, goal, blocked=frozenset()):
+def walls_for_layout(layout):
+    """Higher-tier plans open existing walls; nothing purchased gets erased."""
+    changed = set(WALLS)
+    if layout in ("open", "garden"):
+        # A spacious living/dining opening and wider inter-room archways.
+        changed.difference_update({(8, y) for y in (2, 5, 9)})
+        changed.difference_update({(x, 6) for x in (2, 11)})
+    if layout == "garden":
+        # Open-plan garden level has an unobstructed lower sunroom.
+        changed.difference_update({(8, y) for y in (1, 6, 7, 10)})
+        changed.difference_update({(x, 6) for x in (5, 6, 10, 14)})
+    return changed
+
+
+def path_between(start, goal, blocked=frozenset(), wall_tiles=None):
     """Four-directional shortest walk; returns [] if the target cannot be reached."""
-    if goal in WALLS or goal in blocked or not (0 <= goal[0] < W and 0 <= goal[1] < H):
+    wall_tiles = WALLS if wall_tiles is None else wall_tiles
+    if goal in wall_tiles or goal in blocked or not (0 <= goal[0] < W and 0 <= goal[1] < H):
         return []
     frontier = deque([start])
     previous = {start: None}
@@ -52,7 +72,7 @@ def path_between(start, goal, blocked=frozenset()):
         for delta in ((0, -1), (1, 0), (0, 1), (-1, 0)):
             next_tile = (current[0] + delta[0], current[1] + delta[1])
             if (0 <= next_tile[0] < W and 0 <= next_tile[1] < H
-                    and next_tile not in WALLS and next_tile not in blocked
+                    and next_tile not in wall_tiles and next_tile not in blocked
                     and next_tile not in previous):
                 previous[next_tile] = current
                 frontier.append(next_tile)
@@ -80,7 +100,7 @@ class HouseCanvas(QWidget):
         self.draw_floor(p)
         for entry in self.dialog.state.furniture:
             pos = self.dialog.entry_tile(entry)
-            if pos and pos not in WALLS:
+            if pos and pos not in self.dialog.wall_tiles():
                 self.draw_furniture(p, pos[0] * TILE, pos[1] * TILE, entry.get("item"))
         if self.dialog.state.location == "house" and self.dialog.state.egg_hatched:
             self.draw_pet(p)
@@ -90,13 +110,14 @@ class HouseCanvas(QWidget):
             p.setPen(QPen(QColor("#bdb1e0"), 1, Qt.PenStyle.DotLine))
             for x in range(1, W - 1):
                 for y in range(1, H - 1):
-                    if (x, y) not in WALLS:
+                    if (x, y) not in self.dialog.wall_tiles():
                         p.drawRect(x * TILE, y * TILE, TILE, TILE)
         p.end()
 
     def draw_floor(self, p):
         """Warm woodland interior; grid exists for navigation, not floor appearance."""
         # Continuous plank floors with subtle grain, not checkerboard cells.
+        layout = self.dialog.state.house_layout
         p.fillRect(0, 0, W*TILE, H*TILE, QColor("#be986f"))
         room_colors = (
             (1, 1, 7, 5, "#d2ac82"),   # bedroom: honey pine
@@ -116,8 +137,20 @@ class HouseCanvas(QWidget):
         p.fillRect(11*TILE, 8*TILE, 4*TILE, 2*TILE, QColor("#e5cab0"))
         p.fillRect(11*TILE+8, 8*TILE+8, 4*TILE-16, 2*TILE-16, QColor("#f5e8d3"))
         p.fillRect(2*TILE, 8*TILE, 2*TILE, TILE, QColor("#9ab9ac"))
+        if layout == "open":
+            # The removed partitions make room for a generously sized lounge rug.
+            p.fillRect(7*TILE, 2*TILE, 4*TILE, 3*TILE, QColor("#b8c8a4"))
+            p.fillRect(7*TILE+9, 2*TILE+9, 4*TILE-18, 3*TILE-18, QColor("#e8d8b2"))
+        elif layout == "garden":
+            # Sunny indoor garden and terracotta conservatory floor accent.
+            p.fillRect(10*TILE, 7*TILE, 6*TILE, 4*TILE, QColor("#e2bf9a"))
+            for yy in range(7*TILE, 11*TILE, 23):
+                p.fillRect(10*TILE, yy, 6*TILE, 2, QColor("#ca9d77"))
+            for xx, yy in ((10, 8), (15, 8), (10, 10), (15, 10)):
+                p.fillRect(xx*TILE+8, yy*TILE+8, 15, 15, QColor("#7a9a6a"))
+                p.fillRect(xx*TILE+12, yy*TILE+5, 8, 8, QColor("#b5c99a"))
         # Baseboards and shadowed partitions with clear gaps for doorways.
-        for x, y in WALLS:
+        for x, y in self.dialog.wall_tiles():
             px, py = x*TILE, y*TILE
             p.fillRect(px, py, TILE, TILE, QColor("#7f755b"))
             p.fillRect(px, py, TILE, 7, QColor("#e7d6b2"))
@@ -131,13 +164,20 @@ class HouseCanvas(QWidget):
             p.fillRect(px+15,py+7,2,17,QColor("#fff1d5"))
             p.fillRect(px+6,py+5,4,21,QColor("#d1e2b4"))
             p.fillRect(px+23,py+5,3,21,QColor("#d1e2b4"))
-        # Doorway thresholds: look intentional, but remain walkable.
+        # Doorway thresholds are cosmetic; actual collision comes from wall_tiles.
         for x,y in ((8,3),(8,4),(8,8),(3,6),(4,6),(12,6),(13,6)):
             p.fillRect(x*TILE, y*TILE+TILE-5, TILE, 5, QColor("#8b755b"))
         p.setFont(QFont("Sans", 9, QFont.Weight.Bold))
         p.setPen(QColor("#5d5545"))
-        for label,x,y in (("BEDROOM",2,1),("LIVING ROOM",10,1),
-                          ("KITCHEN",2,7),("PLAYROOM / NURSERY",10,7)):
+        room_labels = {
+            "cottage": (("BEDROOM",2,1),("LIVING ROOM",10,1),
+                        ("KITCHEN",2,7),("PLAYROOM / NURSERY",10,7)),
+            "open": (("SLEEPING NOOK",2,1),("OPEN LOUNGE",10,1),
+                     ("KITCHEN",2,7),("PLAYROOM",11,7)),
+            "garden": (("BEDROOM",2,1),("SUNNY LOUNGE",10,1),
+                       ("KITCHEN / DINING",2,7),("INDOOR GARDEN",11,7)),
+        }
+        for label,x,y in room_labels.get(layout, room_labels["cottage"]):
             p.drawText(x*TILE, y*TILE+15, label)
 
     def draw_furniture(self, p, px, py, item):
