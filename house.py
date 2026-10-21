@@ -478,6 +478,10 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.layout_button.clicked.connect(self.choose_layout)
         layout_row.addWidget(self.layout_button)
         body.addLayout(layout_row)
+        self.preview_button = QPushButton("🎁 Claim 600 preview coins")
+        self.preview_button.setToolTip("One-time test reward to try both house upgrades and furniture")
+        self.preview_button.clicked.connect(self.claim_preview_coins)
+        body.addWidget(self.preview_button)
         self.canvas = HouseCanvas(self)
         body.addWidget(self.canvas)
         self.status = QLabel("Click a floor tile to guide your pet between rooms!")
@@ -485,6 +489,16 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.tick_timer = QTimer(self)
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(260)
+        self.refresh()
+
+    def claim_preview_coins(self):
+        """One-time preview gift; no save-file editing or repeat farming."""
+        if self.state.preview_coins_claimed:
+            return
+        self.state.coins += 600
+        self.state.preview_coins_claimed = True
+        self.save()
+        self.status.setText("🎁 600 coins added for preview testing. Enjoy your cottage upgrades!")
         self.refresh()
 
     def wall_tiles(self):
@@ -592,6 +606,7 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
 
     def refresh(self):
         self.balance.setText(f"🪙 {self.state.coins}")
+        self.preview_button.setVisible(not self.state.preview_coins_claimed)
         self.door_button.setText("↗ Bring selected pet outside" if current_pet(self.state) is False
                                 else "⌂ Send desktop pet home")
         self.update_layout_button()
