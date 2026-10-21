@@ -813,6 +813,9 @@ class DesktopBuddy(QWidget):
             return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        painter.save()
+        if self.lead.pair_interaction == "play":
+            painter.translate(0, -[1,4,6,3,0,3,6,4][self.frame % 8])
         record = find_adopted(self.lead.state, pet_id)
         if record is None and pet_id == FOUNDER:
             draw_pet(painter, self.width(), self.height(), self.lead.state,
@@ -821,25 +824,61 @@ class DesktopBuddy(QWidget):
             scale = 2 if record.get("species") == "Cat" else 3
             draw_adopted_pet(painter, self.width(), self.height(), record,
                              self.frame, scale=scale, facing=self.facing)
+        painter.restore()
+        kind = self.lead.pair_interaction
         if self.lead.friend_heart_until > time.monotonic():
             painter.setPen(QColor("#ea829f"))
             painter.setFont(QFont("Sans",18,QFont.Weight.Bold))
             painter.drawText(57, 20,"♥")
+        elif kind == "greet":
+            painter.setPen(QColor("#74a68a"))
+            painter.setFont(QFont("Sans",16,QFont.Weight.Bold))
+            painter.drawText(52,17,"✦")
+        elif kind == "chase":
+            painter.setPen(QColor("#9f86b9"))
+            painter.setFont(QFont("Sans",13,QFont.Weight.Bold))
+            painter.drawText(57,18,"!!")
 
     def advance(self):
         if not self.isVisible():
             return
         self.frame += 1
-        if self.drag_start is None and self.frame % 4 == 0:
+        kind = self.lead.pair_interaction
+        if self.drag_start is None and self.frame % 3 == 0:
             geom = QApplication.primaryScreen().availableGeometry()
-            # Wander around the lead pet with a small breathing gap.
-            target_x = self.lead.x() + (105 if self.facing < 0 else -105)
-            delta = target_x - self.x()
-            if abs(delta) > 14:
-                x = self.x() + max(-3, min(3, delta))
-                self.move(max(geom.left(), min(x, geom.right()-self.width()+1)), self.y())
-            if self.frame % 75 == 0:
-                self.facing *= -1
+            if kind == "nuzzle":
+                # Real approach: companions bring their sprites face to face.
+                target_x = self.lead.x() + (58 if self.x() >= self.lead.x() else -58)
+                target_y = self.lead.y()
+                speed = 4
+            elif kind == "chase":
+                # Tag: follow more closely instead of just idle-walking.
+                target_x = self.lead.x() + (-68 if self.lead.facing > 0 else 68)
+                target_y = self.lead.y()
+                speed = 5
+            elif kind == "play":
+                # Lighthearted back-and-forth hopping near the other pet.
+                target_x = self.lead.x() + (78 if (self.frame//24)%2 == 0 else -78)
+                target_y = self.lead.y()
+                speed = 5
+            elif kind == "greet":
+                target_x = self.lead.x() + (92 if self.x() >= self.lead.x() else -92)
+                target_y = self.lead.y()
+                speed = 3
+            else:
+                target_x = self.lead.x() + (105 if self.facing < 0 else -105)
+                target_y = self.lead.y()
+                speed = 3
+            dx, dy = target_x-self.x(), target_y-self.y()
+            if abs(dx) > 10 or abs(dy) > 9:
+                new_x = self.x()+max(-speed,min(speed,dx)) if abs(dx)>10 else self.x()
+                new_y = self.y()+max(-2,min(2,dy)) if abs(dy)>9 else self.y()
+                self.move(max(geom.left(),min(new_x,geom.right()-self.width()+1)),
+                          max(geom.top(),min(new_y,geom.bottom()-self.height()+1)))
+            if abs(dx) > 10:
+                self.facing = 1 if dx >= 0 else -1
+            elif kind in ("greet","nuzzle"):
+                self.facing = -1 if self.x() >= self.lead.x() else 1
         self.update()
 
     def mousePressEvent(self, event):
@@ -847,6 +886,8 @@ class DesktopBuddy(QWidget):
             menu = QMenu(self)
             menu.addAction("♥ Care for this pet", lambda: self.lead.open_console_for(self.pet_id()))
             menu.addAction("⌂ Send this pet home", self.lead.dismiss_buddy)
+            menu.addAction("🎾 Play together", lambda: self.lead.start_pair_interaction("play"))
+            menu.addAction("♡ Nuzzle", lambda: self.lead.start_pair_interaction("nuzzle"))
             menu.exec(event.globalPosition().toPoint())
         elif event.button() == Qt.MouseButton.LeftButton:
             self.drag_start = event.globalPosition().toPoint()
