@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Ghost Pet mouse icon">
+<defs><linearGradient id="bg" x2="0" y2="1"><stop stop-color="#e9eedb"/><stop offset="1" stop-color="#afc9b1"/></linearGradient></defs>
+<rect x="5" y="5" width="118" height="118" rx="28" fill="url(#bg)" stroke="#687f72" stroke-width="5"/>
+<path d="M92 83 Q119 93 106 109" fill="none" stroke="#56685e" stroke-width="7" stroke-linecap="round"/>
+<circle cx="38" cy="41" r="21" fill="#354d4e"/>
+<circle cx="90" cy="41" r="21" fill="#354d4e"/>
+<circle cx="38" cy="41" r="16" fill="#a2e2ce"/>
+<circle cx="90" cy="41" r="16" fill="#a2e2ce"/>
+<circle cx="38" cy="41" r="9" fill="#e7acbc"/>
+<circle cx="90" cy="41" r="9" fill="#e7acbc"/>
+<ellipse cx="64" cy="75" rx="38" ry="39" fill="#354d4e"/>
+<ellipse cx="64" cy="74" rx="32" ry="33" fill="#a2e2ce"/>
+<ellipse cx="64" cy="97" rx="17" ry="11" fill="#e2f2de"/>
+<rect x="39" y="98" width="18" height="12" rx="6" fill="#6bab9a"/>
+<rect x="71" y="98" width="18" height="12" rx="6" fill="#6bab9a"/>
+<circle cx="51" cy="69" r="5" fill="#30474b"/>
+<circle cx="77" cy="69" r="5" fill="#30474b"/>
+<circle cx="40" cy="80" r="6" fill="#ecb1ba"/>
+<circle cx="88" cy="80" r="6" fill="#ecb1ba"/>
+<path d="M60 81 L68 81 L64 85 Z" fill="#30474b"/>
+<path d="M96 24 L100 34 L111 35 L102 42 L105 53 L96 46 L87 53 L90 42 L81 35 L92 34 Z" fill="#efd58e" stroke="#8e7756" stroke-width="1.5"/>
+</svg>
