@@ -33,10 +33,18 @@ class CottageLayoutsTest(unittest.TestCase):
         starter = ns["walls_for_layout"]("cottage")
         middle = ns["walls_for_layout"]("open")
         deluxe = ns["walls_for_layout"]("garden")
-        self.assertGreater(len(starter), len(middle))
+        # These are genuine room renovations, not subsets of the same
+        # four-room map; new privacy nooks and greenhouse posts are relocated.
+        self.assertGreater(len(starter), len(middle) + 5)
         self.assertGreater(len(middle), len(deluxe))
-        self.assertTrue(deluxe.issubset(middle))
-        self.assertTrue(middle.issubset(starter))
+        self.assertGreater(len(starter.symmetric_difference(middle)), 12)
+        self.assertGreater(len(middle.symmetric_difference(deluxe)), 9)
+        self.assertIn((8,2), starter)
+        self.assertNotIn((8,2), middle)
+        self.assertIn((6,2), middle)  # compact sleeping-nook partition
+        self.assertNotIn((6,2), deluxe)
+        self.assertIn((12,2), deluxe) # glasshouse column
+        self.assertNotIn((12,2), middle)
 
     def test_all_rooms_remain_reachable_in_every_plan(self):
         ns = self.logic
