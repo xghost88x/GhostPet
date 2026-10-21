@@ -990,6 +990,16 @@ class CareConsole(QDialog):
         self.pair_nuzzle_button.clicked.connect(lambda: self.start_pair_action("nuzzle"))
         pair_actions.addWidget(self.pair_nuzzle_button)
         outer.addLayout(pair_actions)
+        social_row = QHBoxLayout()
+        self.auto_social_button = QPushButton("✨ Auto interactions: On")
+        self.auto_social_button.clicked.connect(self.toggle_auto_social)
+        self.auto_social_button.setToolTip(
+            "Let your two roaming pets start playful encounters by themselves")
+        social_row.addWidget(self.auto_social_button,1)
+        self.surprise_button = QPushButton("🎲 Surprise!")
+        self.surprise_button.clicked.connect(lambda: self.start_pair_action(None))
+        social_row.addWidget(self.surprise_button,1)
+        outer.addLayout(social_row)
         self.details = QWidget()
         details = QVBoxLayout(self.details)
         details.setContentsMargins(0, 0, 0, 0)
@@ -1098,6 +1108,13 @@ class CareConsole(QDialog):
             self.tip.setText("Two little companions can wander together now! ♡")
         else:
             self.tip.setText("Hatch or adopt this pet before inviting them.")
+        self.refresh()
+
+    def toggle_auto_social(self):
+        self.pet.state.auto_social = not self.pet.state.auto_social
+        self.pet.persist()
+        self.tip.setText("Pets will start their own antics!" if self.pet.state.auto_social
+                         else "Automatic interactions paused.")
         self.refresh()
 
     def start_pair_action(self, kind):
@@ -1215,8 +1232,12 @@ class CareConsole(QDialog):
         self.buddy_button.setEnabled(not is_lead and
                                       (len(state.adopted_pets or []) > 0 or
                                        self.selected_id != FOUNDER))
-        for btn in (self.pair_play_button, self.pair_nuzzle_button):
+        for btn in (self.pair_play_button, self.pair_nuzzle_button,
+                    self.surprise_button):
             btn.setEnabled(self.pet.pair_ready() and not self.pet.pair_interaction)
+        self.auto_social_button.setText(
+            "✨ Auto interactions: On" if state.auto_social
+            else "⏸ Auto interactions: Off")
         other_ids = [id_ for _, id_ in choices if id_ != self.selected_id]
         previous = self.friend_partner.currentData()
         partner = previous if previous in other_ids else (other_ids[0] if other_ids else None)
