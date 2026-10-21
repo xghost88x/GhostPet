@@ -809,6 +809,9 @@ class CareConsole(QDialog):
         self.summon_button.setToolTip("Swap which companion is walking on your desktop")
         self.summon_button.clicked.connect(self.summon_selected)
         outer.addWidget(self.summon_button)
+        self.buddy_button = QPushButton("♡ Invite selected pet as Buddy")
+        self.buddy_button.clicked.connect(self.invite_selected)
+        outer.addWidget(self.buddy_button)
         self.details = QWidget()
         details = QVBoxLayout(self.details)
         details.setContentsMargins(0, 0, 0, 0)
@@ -855,6 +858,19 @@ class CareConsole(QDialog):
         self.personality_label = QLabel()
         self.personality_label.setWordWrap(True)
         details.addWidget(self.personality_label)
+        friend_row = QHBoxLayout()
+        friend_row.addWidget(QLabel("Friendship with:"))
+        self.friend_partner = QComboBox()
+        self.friend_partner.currentIndexChanged.connect(self.update_friend_meter)
+        friend_row.addWidget(self.friend_partner,1)
+        details.addLayout(friend_row)
+        self.friend_meter = QProgressBar()
+        self.friend_meter.setRange(0,100)
+        self.friend_meter.setTextVisible(True)
+        self.friend_meter.setFormat("%v / 100")
+        details.addWidget(self.friend_meter)
+        self.friendship_desc = QLabel()
+        details.addWidget(self.friendship_desc)
         extras = QHBoxLayout()
         rename = QPushButton("✎ Rename")
         rename.clicked.connect(self.rename_pet)
@@ -895,6 +911,28 @@ class CareConsole(QDialog):
         if self.pet.bring_selected_pet_to_desktop(selected):
             self.tip.setText("That companion is now on your desktop! ♡")
         self.refresh()
+
+    def invite_selected(self):
+        if self.selected_id == self.pet.state.desktop_companion_id:
+            self.pet.dismiss_buddy()
+            self.tip.setText("Your buddy went home! ♡")
+        elif self.pet.invite_selected_buddy(self.selected_id):
+            self.tip.setText("Two little companions can wander together now! ♡")
+        else:
+            self.tip.setText("Hatch or adopt this pet before inviting them.")
+        self.refresh()
+
+    def update_friend_meter(self, _index=None):
+        partner = self.friend_partner.currentData()
+        if partner and partner != self.selected_id:
+            score = relationship_score(self.pet.state, self.selected_id, partner)
+            self.friend_meter.setValue(round(score))
+            self.friendship_desc.setText(
+                f"♡ {pet_name(self.pet.state, self.selected_id)} and "
+                f"{pet_name(self.pet.state,partner)} — {relationship_title(score)}")
+        else:
+            self.friend_meter.setValue(0)
+            self.friendship_desc.setText("Adopt another pet to build friendships.")
 
     def toggle_compact(self):
         self.details.setVisible(not self.details.isVisible())
@@ -982,6 +1020,25 @@ class CareConsole(QDialog):
         self.summon_button.setText("✓ This pet is on your desktop" if active
                                    else "🐾 Bring selected pet to desktop")
         self.summon_button.setEnabled(not active)
+        is_buddy = state.desktop_companion_id == self.selected_id
+        is_lead = state.desktop_pet_id == self.selected_id
+        self.buddy_button.setText("⌂ Send Buddy Home" if is_buddy
+                                  else "♡ Invite as Second Pet")
+        self.buddy_button.setEnabled(not is_lead and
+                                      (len(state.adopted_pets or []) > 0 or
+                                       self.selected_id != FOUNDER))
+        other_ids = [id_ for _, id_ in choices if id_ != self.selected_id]
+        previous = self.friend_partner.currentData()
+        partner = previous if previous in other_ids else (other_ids[0] if other_ids else None)
+        self.friend_partner.blockSignals(True)
+        self.friend_partner.clear()
+        for id_ in other_ids:
+            self.friend_partner.addItem(pet_name(state,id_), id_)
+        if partner in other_ids:
+            self.friend_partner.setCurrentIndex(other_ids.index(partner))
+        self.friend_partner.blockSignals(False)
+        self.friend_partner.setEnabled(bool(other_ids))
+        self.update_friend_meter()
         self.roaming_button.setVisible(active)
         roaming = adopted.get("roaming", True) if adopted is not None else state.roaming
         self.roaming_button.setText("⏸ Pause walk" if roaming else "▶ Resume walk")
