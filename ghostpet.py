@@ -509,17 +509,33 @@ class HomePortal(QWidget):
         self.setToolTip("Click to visit the house • Drag to move")
 
     def paintEvent(self, event):
+        """Little woodland cottage entrance, matching the non-spooky interior."""
         p = QPainter(self)
-        p.fillRect(9, 37, 63, 54, QColor("#35314e"))
-        p.fillRect(16, 43, 50, 41, QColor("#c9b1e8"))
-        p.fillRect(3, 32, 75, 12, QColor("#74588f"))
-        p.fillRect(15, 19, 55, 14, QColor("#8f6dad"))
-        p.fillRect(27, 58, 25, 32, QColor("#49405e"))
-        p.fillRect(33, 63, 12, 21, QColor("#ab90d0"))
-        p.fillRect(58, 54, 7, 9, QColor("#f5e6ab"))
-        p.setPen(QColor("#fff3fc"))
-        p.setFont(QFont("Sans", 9, QFont.Weight.Bold))
-        p.drawText(15, 14, "HOME")
+        p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        p.fillRect(10,42,62,49,QColor("#624f42"))    # cozy outline
+        p.fillRect(14,45,54,43,QColor("#e6cfad"))    # cream plaster
+        for yy in (52,64,76):
+            p.fillRect(15,yy,52,2,QColor("#c9ae8c")) # clapboard detail
+        p.fillRect(2,36,76,9,QColor("#586b59"))      # sage eaves
+        p.fillRect(9,27,62,9,QColor("#789780"))
+        p.fillRect(17,19,46,9,QColor("#91a987"))
+        p.fillRect(25,12,30,8,QColor("#b5bba0"))
+        p.fillRect(25,8,8,14,QColor("#b48b70"))      # chimney
+        p.fillRect(25,8,8,3,QColor("#e5bdaa"))
+        p.fillRect(28,59,24,31,QColor("#655445"))    # warm door
+        p.fillRect(31,62,18,27,QColor("#927a5f"))
+        p.fillRect(46,77,3,4,QColor("#ecd79f"))
+        for xx in (18,57):
+            p.fillRect(xx-2,53,13,14,QColor("#8f7259"))
+            p.fillRect(xx,55,9,10,QColor("#accfca"))
+            p.fillRect(xx+4,55,2,10,QColor("#f9f2cf"))
+        p.fillRect(9,81,13,9,QColor("#9c765c"))
+        p.fillRect(11,75,9,9,QColor("#729b6e"))
+        p.fillRect(61,82,13,9,QColor("#9c765c"))
+        p.fillRect(64,76,9,8,QColor("#83a977"))
+        p.setPen(QColor("#3f5145"))
+        p.setFont(QFont("Sans",8,QFont.Weight.Bold))
+        p.drawText(24,9,"HOME")
         p.end()
 
     def mousePressEvent(self, event):
