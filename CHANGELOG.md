@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.3-preview — Cursor Chase Antics
+
+- Add occasional autonomous **mouse-pointer chase** behavior for either roaming desktop pet; cats have higher selection probability.
+- Add a manual **Chase Pointer** button in Pocket Care and right-click action for both roaming pet windows.
+- Add a saved separate **Cursor antics On/Off** toggle, enabled by default, without affecting other pet interactions.
+- Bound individual chase episodes to eight seconds with a 75-second minimum spontaneous cooldown.
+- Never control the actual OS cursor; keep the pet's destination outside the pointer with a 30px safety gap and within screen bounds.
+- Give the pet a cute excited-bouncing animation and tiny happiness gain when it finishes chasing.
+- Cancel cleanly on sleeping, dragging, opening care/house, or moving a pet indoors; don't replace a concurrent duo interaction.
+- Add automated Qt tests for pointer distance, screen edges, timeout, no duplicate rewards, optional behavior and solo/buddy compatibility.
+
+
 ## v0.7.2-preview — Autonomous Pet Antics & Working Food Bowls
 
 - Expand two-pet interactions from four to eight: greet, nuzzle, play, chase, high-five, dance, peekaboo and share a snack.
