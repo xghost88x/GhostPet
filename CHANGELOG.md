@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.7.4-preview — The Pointer Can Be Caught
+
+- Add a win condition to the mouse-pointer chase after the pet reaches the safe 30px pointer gap and the cursor pauses for about 0.4 seconds.
+- Show a sparkly **GOTCHA!** effect on the catching pet, along with victory speech, **+6 happiness** and **2 coins**.
+- Retain the existing escape outcome and +2 happiness for pets that cannot catch a moving pointer within eight seconds.
+- Never move, click or obscure the actual OS pointer intentionally. Cancel safely when the pet becomes unavailable.
+- Guard against repeated rewards with the existing one-active-chase state machine.
+- Test stationary-pounce wins, moving-pointer escapes, proximity requirement and no duplicate payouts.
+
+
 ## v0.7.3-preview — Cursor Chase Antics
 
 - Add occasional autonomous **mouse-pointer chase** behavior for either roaming desktop pet; cats have higher selection probability.
