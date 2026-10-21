@@ -1,8 +1,14 @@
-# GhostPet v0.5.3 Preview — Upgradeable Cottages
+# GhostPet v0.5.4 Preview — Clickable Launcher & Updates
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.5.4
+
+**No terminal needed after one-time installation.** Run `bash install.sh` from the downloaded project folder to install Ghost Pet to `~/Applications/GhostPet`. The installer adds **Ghost Pet** and **Update Ghost Pet** to Zorin's application menu, and creates a clickable desktop icon if the desktop directory is present. The compact Pocket Care panel now has a **↻ Update** button.
+
+Updates fetch the latest GitHub main revision in a separate graphical window. They make backups of the previous program files and your pet's `~/.local/share/ghostpet/state.json` before replacing application files. They leave the Python virtual environment, pet saves, furnishings, coins, and Founder sprite intact. Reopen the app using the updater's **Launch Ghost Pet** button when finished.
 
 ## What's new in v0.5.3
 
@@ -58,20 +64,24 @@ Your original saved companion is marked with a 🌟 Founder star and is never ov
 - Optional tray menu where a tray is available. It never installs a GNOME extension.
 - Your pet *never dies from neglect* in this first cozy release.
 
-## Install on Zorin
+## Install on Zorin (once)
 
-1. Unzip this folder somewhere permanent (for example `~/Applications/GhostPet`).
-2. In a terminal, navigate into that folder.
-3. Run:
+1. Download the ZIP using GitHub's **Code → Download ZIP** and extract it to Downloads.
+2. If an older Ghost Pet is running, quit that copy.
+3. Open a terminal *only for this one-time setup* and run:
 
    ```bash
    sudo apt install python3-venv libxcb-cursor0
-   chmod +x start.sh
-   ./start.sh
+   cd ~/Downloads/GhostPet-main
+   bash install.sh
    ```
 
-The first launch creates a private Python environment and installs PySide6
-from PyPI, which needs internet access. Later launches reuse it.
+4. Open Zorin's application menu and search for **Ghost Pet**, or double-click the new **Ghost Pet** desktop shortcut. On some Zorin desktops, first right-click the icon and choose **Allow Launching**.
+5. The first launch creates a private Python environment and downloads PySide6. Later launches reuse it. You can pin the app to your dock or favorites.
+
+**Future updates:** In **Pocket Care**, click **↻ Update**. Ghost Pet saves and quits while the separate updater window checks GitHub. Click **Launch Ghost Pet** after a successful update. Alternatively, find **Update Ghost Pet** in the app menu (quit the main app first). No additional ZIP downloads are needed.
+
+The installer stores application files in `~/Applications/GhostPet` and never removes your save data at `~/.local/share/ghostpet/state.json`. The updater creates a timestamped save backup in `~/.local/share/ghostpet/backups/` and keeps the previous program files in `~/Applications/GhostPet/.previous-version/` for recovery.
 
 ## Using it
 
@@ -94,11 +104,12 @@ a floor tile to place it. Right-click a furnished tile to store its item.
 Furniture is unlocked once using coins, then can be placed again freely.
 Old six-column v0.2 house arrangements are migrated to the new floor plan.
 
-## Desktop shortcut (optional, after first launch works)
+## Desktop launcher
 
-Create a launcher through Zorin's menu editor, targeting the absolute path to
-`start.sh`. Set its working directory to the folder containing the script.
-The startup-at-login option can be added in Zorin's **Startup Applications**.
+The installer automatically creates a Zorin application-menu launcher, a dedicated
+**Update Ghost Pet** launcher, and a desktop shortcut if the desktop directory
+exists. You may pin **Ghost Pet** to the dash/dock after opening it.
+Automatic startup can be configured using Zorin's **Startup Applications**.
 
 ## Platform note
 
