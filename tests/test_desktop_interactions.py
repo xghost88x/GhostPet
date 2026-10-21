@@ -93,7 +93,31 @@ class DesktopInteractionTests(unittest.TestCase):
         with patch.object(self.lead.buddy,"advance"), \
              patch("ghostpet.random.random",return_value=0.01):
             self.lead.animate()
-        self.assertIn(self.lead.pair_interaction,("greet","nuzzle","play","chase"))
+        self.assertIn(self.lead.pair_interaction,("greet","nuzzle","play","chase",
+                   "highfive","dance","peekaboo","share_snack"))
+
+    def test_all_eight_interactions_reward_once_and_cancel_safely(self):
+        for kind in ("greet","nuzzle","play","chase",
+                     "highfive","dance","peekaboo","share_snack"):
+            with self.subTest(kind=kind):
+                before=relationship_score(self.state,"founder","cat1")
+                self.assertTrue(self.lead.start_pair_interaction(kind))
+                self.lead.pair_interaction_until=time.monotonic()-1
+                self.lead.advance_pair_interaction()
+                self.assertIsNone(self.lead.pair_interaction)
+                after=relationship_score(self.state,"founder","cat1")
+                self.assertGreater(after,before)
+                self.lead.advance_pair_interaction()
+                self.assertEqual(relationship_score(self.state,"founder","cat1"),after)
+
+    def test_auto_interactions_can_be_disabled_without_disabling_manual_play(self):
+        self.lead.state.auto_social=False
+        self.lead.buddy.move(self.lead.x()+50,self.lead.y())
+        self.lead.last_friend_interaction=0
+        with patch("ghostpet.random.random",return_value=0):
+            self.assertFalse(self.lead.maybe_start_auto_interaction())
+        self.assertIsNone(self.lead.pair_interaction)
+        self.assertTrue(self.lead.start_pair_interaction("dance"))
 
     def test_art_has_no_room_name_text(self):
         art = (Path(__file__).resolve().parents[1] / "cottage_art.py").read_text()
