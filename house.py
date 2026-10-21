@@ -247,6 +247,18 @@ except ModuleNotFoundError as exc:
 from PySide6.QtWidgets import (QComboBox, QDialog, QHBoxLayout, QLabel,
                                QPushButton, QVBoxLayout, QWidget)
 
+# Optional imports keep older v0.5.4 updater installations working.
+try:
+    from cottage_art import built_in_occupied
+except ImportError:
+    def built_in_occupied(layout):
+        return set()
+
+try:
+    from adopted_sprites import draw_adopted_pet as draw_housemate_sprite
+except ImportError:
+    draw_housemate_sprite = None
+
 TILE = 32
 W, H = 18, 12
 ROOMS = ("Bedroom", "Living room", "Kitchen", "Playroom")
@@ -367,6 +379,12 @@ class HouseCanvas(QWidget):
         y = max(1, min(H-2, int(pet.get("y", 8))))
         px, py = x*TILE+4, y*TILE+4
         species = pet.get("species","Ghost")
+        if species == "Cat" and draw_housemate_sprite is not None:
+            p.save()
+            p.translate(x*TILE, y*TILE)
+            draw_housemate_sprite(p, TILE, TILE, pet, 1, scale=1)
+            p.restore()
+            return
         tint = QColor({"Ghost":"#dfd5ff","Cat":"#f0bd81","Dog":"#bb9a77",
                        "Bunny":"#f4e9e0","Fox":"#ea945b","Dragon":"#81cc9b"}.get(species,"#dfd5ff"))
         dark = QColor("#303047")
@@ -445,7 +463,23 @@ class HouseDialog(QDialog):
             self.state.housewarming_granted = True
             self.save()
         self._migrate_old_room()
-        self.setWindowTitle("GhostPet • Cozy Cottage v0.6")
+        # Relocate housemates away from newly furnished cells without losing them.
+        old_position = self.position
+        self.position = self.safe_position(self.position, self.wall_tiles())
+        if self.state.location == "house":
+            self.state.house_pet_x, self.state.house_pet_y = self.position
+        changed = self.position != old_position
+        for housemate in self.state.adopted_pets or []:
+            if housemate.get("location", "house") != "house":
+                continue
+            old = (int(housemate.get("x",12)), int(housemate.get("y",8)))
+            adjusted = self.safe_position(old, self.wall_tiles())
+            if adjusted != old:
+                housemate["x"], housemate["y"] = adjusted
+                changed = True
+        if changed:
+            self.save()
+        self.setWindowTitle("GhostPet • Furnished Woodland Cottage v0.6.2")
         self.setStyleSheet("""QDialog{background:#f1e4d2;color:#443e31}
 QLabel{color:#443e31;font-size:13px}
 QPushButton,QComboBox{background:#759278;color:white;border:1px solid #55735b;
@@ -599,10 +633,11 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.save()
 
     def blocked(self):
-        # Rugs are walkable; large objects occupy their tile.
-        return {tile for entry in self.state.furniture
-                if entry.get("item") != "rug"
-                for tile in [self.entry_tile(entry)] if tile is not None}
+        # Furniture and built-in large furnishings block the hidden movement grid.
+        owned = {tile for entry in self.state.furniture
+                 if entry.get("item") != "rug"
+                 for tile in [self.entry_tile(entry)] if tile is not None}
+        return owned | built_in_occupied(self.state.house_layout)
 
     def refresh(self):
         self.balance.setText(f"🪙 {self.state.coins}")
@@ -637,6 +672,9 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
             self.status.setText("That tile is blocked; try another destination.")
 
     def place_item(self, tile):
+        if tile in built_in_occupied(self.state.house_layout):
+            self.status.setText("That spot has built-in cottage furniture. Pick an open tile!")
+            return
         if tile == self.position:
             self.status.setText("Let your pet move aside first!")
             return
