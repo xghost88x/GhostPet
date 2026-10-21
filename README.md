@@ -1,8 +1,18 @@
-# GhostPet v0.7.0 Preview — Three Truly Different Homes
+# GhostPet v0.7.1 Preview — Interactive Desktop Buddies
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.7.1
+
+**Room labels removed:** No more floating `BEDROOM`, `OPEN LIVING + DINING`, `KITCHEN` or `SUNLIT GLASS GARDEN` text covering the floor art. All three cottage layouts, upgrades and floor-plan dropdown remain. The room purpose comes from the actual furniture. The older fallback renderer also hides labels.
+
+**Two desktop pets interact:** After inviting a second pet in Pocket Care, you can press **🎾 Play Together** or **♡ Nuzzle** (or right-click either roaming pet for the same actions). The two companions now visibly approach for nuzzling, bounce during a play session, follow more closely during tag/chase, and greet each other. They sometimes start a random interaction themselves while close and awake. The shared friendship meter rises **only after an interaction successfully completes**, not once per animation frame; playful actions also lightly adjust both pets' happiness and energy. The pets can't interact while sleeping, dragged, cuddling, or going home. Leaving the desktop cancels unfinished interactions without granting rewards.
+
+**Founder sprite remains untouched:** The original petite mouse sprite is unchanged; playful bouncing moves the drawn sprite temporarily without repainting its design.
+
+Existing household saves, pets, coins, previously unlocked layouts, second-pet roaming and indoor relationships remain. Open Pocket Care → **↻ Update**, then relaunch to try the controls.
 
 ## What's new in v0.7.0
 
