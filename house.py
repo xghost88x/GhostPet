@@ -452,6 +452,79 @@ LAYOUTS = {
     "garden": ("Sunny Garden Cottage", 260),
 }
 
+BOWL_CAPACITY = 6
+BOWL_MEAL_POINTS = 26
+BOWL_MEAL_COOLDOWN = 60  # seconds: prevents rapid repeated feeding.
+
+
+def house_bowls(state):
+    """Only placed bowls hold food. Old save files gain a full bowl safely."""
+    bowls = []
+    for entry in (state.furniture or []):
+        if isinstance(entry,dict) and entry.get("item") == "bowl":
+            if "servings" not in entry:
+                entry["servings"] = BOWL_CAPACITY
+            entry["servings"] = max(0,min(BOWL_CAPACITY,int(entry["servings"])))
+            bowls.append(entry)
+    return bowls
+
+
+def refill_house_bowls(state):
+    """Refill available bowls without charging, altering inventory or pet stats."""
+    bowls = house_bowls(state)
+    for bowl in bowls:
+        bowl["servings"] = BOWL_CAPACITY
+    return len(bowls)
+
+
+def house_feed_cycle(state, now=None, require_near=False):
+    """Feed hungry *indoor* pets from stocked bowls, once per pet per cooldown.
+
+    When the house window is hidden, pets can feed as part of their abstract
+    indoor simulation. With the house open, a pet must stand next to a bowl.
+    Returns IDs of pets that ate; all hunger and serving changes persist via
+    caller's normal save callback.
+    """
+    import time as _time
+    now = _time.time() if now is None else now
+    bowls = [entry for entry in house_bowls(state) if entry["servings"] > 0]
+    if not bowls:
+        return []
+    active_ids = set(active_desktop_ids(state))
+    indoor = []
+    if getattr(state,"egg_hatched",False) and FOUNDER not in active_ids:
+        indoor.append((FOUNDER,state,(int(state.house_pet_x),int(state.house_pet_y))))
+    for pet in (state.adopted_pets or []):
+        if isinstance(pet,dict) and pet.get("id") not in active_ids:
+            indoor.append((pet.get("id"),pet,(int(pet.get("x",12)),int(pet.get("y",8)))))
+    fed = []
+    for pet_id,pet,pos in indoor:
+        hunger = float(pet.get("hunger",85) if isinstance(pet,dict)
+                       else getattr(pet,"hunger",85))
+        last = float(pet.get("last_bowl_meal",0) if isinstance(pet,dict)
+                     else getattr(pet,"last_bowl_meal",0))
+        if hunger >= 80 or now-last < BOWL_MEAL_COOLDOWN:
+            continue
+        near = [b for b in bowls if not require_near or
+                abs(b["cell"]%W-pos[0])+abs(b["cell"]//W-pos[1]) <= 2]
+        if not near:
+            continue
+        bowl = near[0]
+        bowl["servings"] -= 1
+        value = min(100,hunger + BOWL_MEAL_POINTS)
+        if isinstance(pet,dict):
+            pet["hunger"] = value
+            pet["last_bowl_meal"] = now
+        else:
+            pet.hunger = value
+            pet.last_bowl_meal = now
+            pet.times_fed += 1
+        fed.append(pet_id)
+        bowls = [b for b in bowls if b["servings"] > 0]
+        if not bowls:
+            break
+    return fed
+
 
 def walls_for_layout(layout):
     """Truly different plans within the same exterior footprint.
