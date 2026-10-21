@@ -816,8 +816,15 @@ class DesktopBuddy(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         painter.save()
-        if self.lead.pair_interaction == "play":
-            painter.translate(0, -[1,4,6,3,0,3,6,4][self.frame % 8])
+        if self.lead.pair_interaction in ("play","dance","highfive"):
+            bounce = [1,4,6,3,0,3,6,4] if self.lead.pair_interaction=="play" else [0,4,1,6,0,5,2,7]
+            painter.translate(0, -bounce[self.frame % 8])
+            if self.lead.pair_interaction=="dance":
+                painter.translate(3 if (self.frame//5)%2 else -3,0)
+        if self.lead.pair_interaction=="peekaboo" and (
+                time.monotonic()-self.lead.pair_started_at <
+                (self.lead.pair_interaction_until-self.lead.pair_started_at)*.55):
+            painter.setOpacity(.45)
         record = find_adopted(self.lead.state, pet_id)
         if record is None and pet_id == FOUNDER:
             draw_pet(painter, self.width(), self.height(), self.lead.state,
@@ -840,6 +847,11 @@ class DesktopBuddy(QWidget):
             painter.setPen(QColor("#9f86b9"))
             painter.setFont(QFont("Sans",13,QFont.Weight.Bold))
             painter.drawText(57,18,"!!")
+        elif kind in ("dance","peekaboo","highfive","share_snack"):
+            painter.setFont(QFont("Sans",14,QFont.Weight.Bold))
+            painter.setPen(QColor("#a985bd"))
+            symbol = {"dance":"♫","peekaboo":"?","highfive":"✦","share_snack":"♥"}[kind]
+            painter.drawText(53,17,symbol)
 
     def advance(self):
         if not self.isVisible():
@@ -863,10 +875,26 @@ class DesktopBuddy(QWidget):
                 target_x = self.lead.x() + (78 if (self.frame//24)%2 == 0 else -78)
                 target_y = self.lead.y()
                 speed = 5
-            elif kind == "greet":
-                target_x = self.lead.x() + (92 if self.x() >= self.lead.x() else -92)
+            elif kind in ("greet","highfive","share_snack"):
+                gap = 58 if kind=="highfive" else 82
+                target_x = self.lead.x() + (gap if self.x() >= self.lead.x() else -gap)
                 target_y = self.lead.y()
-                speed = 3
+                speed = 4 if kind == "highfive" else 3
+            elif kind == "dance":
+                target_x = self.lead.x() + (90 if (self.frame//15)%2==0 else 116)
+                target_y = self.lead.y() + (6 if (self.frame//11)%2==0 else -6)
+                speed = 4
+            elif kind == "peekaboo":
+                # Duck toward the little portal, then pop back into view.
+                half = (self.lead.pair_interaction_until -
+                        self.lead.pair_started_at)*.5
+                if time.monotonic()-self.lead.pair_started_at < half:
+                    target_x = self.lead.portal.x()
+                    target_y = self.lead.portal.y()
+                else:
+                    target_x = self.lead.x()+90
+                    target_y = self.lead.y()
+                speed = 5
             else:
                 target_x = self.lead.x() + (105 if self.facing < 0 else -105)
                 target_y = self.lead.y()
@@ -1300,8 +1328,11 @@ class RoamingPet(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         selected = current_pet(self.state)
         painter.save()
-        if self.pair_interaction == "play":
-            painter.translate(0, -[0,2,5,3,0,1,4,2][self.frame % 8])
+        if self.pair_interaction in ("play","dance","highfive"):
+            hops = [0,2,5,3,0,1,4,2] if self.pair_interaction=="play" else [0,5,2,7,0,6,2,5]
+            painter.translate(0,-hops[self.frame%8])
+            if self.pair_interaction=="dance":
+                painter.translate(4 if (self.frame//7)%2 else -4,0)
         if isinstance(selected, dict):
             # Keep original Founder mouse pixel artwork untouched.
             scale = 2 if selected.get("species") == "Cat" else 3
@@ -1311,6 +1342,12 @@ class RoamingPet(QWidget):
             draw_pet(painter, self.width(), self.height(), self.state,
                      self.frame, scale=4, facing=self.facing)
         painter.restore()
+        if self.pair_interaction in ("highfive","dance","peekaboo","share_snack"):
+            painter.setFont(QFont("Sans",13,QFont.Weight.Bold))
+            painter.setPen(QColor("#cf89ab"))
+            painter.drawText(88,26,{
+                "highfive":"✦","dance":"♫","peekaboo":"?","share_snack":"♥",
+            }[self.pair_interaction])
         if self.active_sleeping():
             painter.setPen(QColor("#bee8fa"))
             painter.setFont(QFont("monospace", 12, QFont.Weight.Bold))
