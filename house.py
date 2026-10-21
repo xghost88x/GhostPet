@@ -1150,6 +1150,9 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
 
     def tick(self):
         if self.mode != "Explore":
+            # Feeding still works while the owner arranges the furniture.
+            self.feed_indoor_pets()
+            self.canvas.update()
             return
         # Housemates keep exploring even when the founder is outside.
         occupied = self.blocked()
