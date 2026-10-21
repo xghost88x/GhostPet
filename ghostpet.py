@@ -1051,6 +1051,18 @@ class CareConsole(QDialog):
         details.setSpacing(5)
         details.addLayout(pair_actions)
         details.addLayout(social_row)
+        cursor_row = QHBoxLayout()
+        self.chase_button = QPushButton("🐾 Chase Pointer")
+        self.chase_button.setToolTip(
+            "Send the selected desktop pet after your mouse pointer for 8 seconds")
+        self.chase_button.clicked.connect(self.chase_selected)
+        cursor_row.addWidget(self.chase_button)
+        self.cursor_toggle = QPushButton("🐭 Cursor antics: On")
+        self.cursor_toggle.setToolTip(
+            "Occasionally let awake roaming pets chase the pointer by themselves")
+        self.cursor_toggle.clicked.connect(self.toggle_cursor_antics)
+        cursor_row.addWidget(self.cursor_toggle)
+        details.addLayout(cursor_row)
         overview = QHBoxLayout()
         self.avatar = QLabel("🐭")
         self.avatar.setFixedWidth(48)
@@ -1155,6 +1167,22 @@ class CareConsole(QDialog):
             self.tip.setText("Two little companions can wander together now! ♡")
         else:
             self.tip.setText("Hatch or adopt this pet before inviting them.")
+        self.refresh()
+
+    def chase_selected(self):
+        if self.pet.start_cursor_chase(self.selected_id, manual=True):
+            # Hide Pocket Care to give the pet a clear desktop playground.
+            self.hide()
+        else:
+            self.tip.setText("Select an awake pet that's out on the desktop.")
+
+    def toggle_cursor_antics(self):
+        self.pet.state.auto_cursor_chase = not self.pet.state.auto_cursor_chase
+        if not self.pet.state.auto_cursor_chase:
+            self.pet.stop_cursor_chase(celebrate=False)
+        self.pet.persist()
+        self.tip.setText("Cursor chasing " +
+                         ("enabled!" if self.pet.state.auto_cursor_chase else "paused."))
         self.refresh()
 
     def toggle_auto_social(self):
@@ -1285,6 +1313,12 @@ class CareConsole(QDialog):
         self.auto_social_button.setText(
             "✨ Auto interactions: On" if state.auto_social
             else "⏸ Auto interactions: Off")
+        self.cursor_toggle.setText(
+            "🐭 Cursor antics: On" if state.auto_cursor_chase
+            else "⏸ Cursor antics: Off")
+        self.chase_button.setEnabled(
+            self.pet.cursor_chaser_id == NONE and
+            self.pet.cursor_pet_ready(self.selected_id))
         other_ids = [id_ for _, id_ in choices if id_ != self.selected_id]
         previous = self.friend_partner.currentData()
         partner = previous if previous in other_ids else (other_ids[0] if other_ids else None)
