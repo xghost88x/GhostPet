@@ -955,8 +955,11 @@ class RoamingPet(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         selected = current_pet(self.state)
         if isinstance(selected, dict):
+            # 28px cat silhouette at 2x = 56px, comfortably smaller than
+            # the 80px house portal. Keep the beloved Founder mouse at 4x.
+            scale = 2 if selected.get("species") == "Cat" else 3
             draw_adopted_pet(painter, self.width(), self.height(), selected,
-                             self.frame, scale=4, facing=self.facing)
+                             self.frame, scale=scale, facing=self.facing)
         elif selected is None:
             draw_pet(painter, self.width(), self.height(), self.state,
                      self.frame, scale=4, facing=self.facing)
