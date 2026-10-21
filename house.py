@@ -660,6 +660,12 @@ class HouseDialog(QDialog):
             self.state.housewarming_granted = True
             self.save()
         self._migrate_old_room()
+        # v0.7 changes the walls for existing owned upgrades, too. Relocate
+        # pieces that are in a newly built partition on FIRST OPEN, not just
+        # when the user presses the layout switch button.
+        restored = self.rehome_saved_furniture()
+        if restored:
+            self.save()
         # Relocate housemates away from newly furnished cells without losing them.
         old_position = self.position
         self.position = self.safe_position(self.position, self.wall_tiles())
@@ -737,6 +743,32 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.tick_timer.timeout.connect(self.tick)
         self.tick_timer.start(260)
         self.refresh()
+
+    def rehome_saved_furniture(self):
+        """Repair old layout coordinates while preserving every furniture item."""
+        reserved = self.wall_tiles() | built_in_occupied(self.state.house_layout)
+        occupied = set()
+        changed = 0
+        for entry in self.state.furniture:
+            tile = self.entry_tile(entry)
+            if tile is None:
+                continue
+            valid = (0 < tile[0] < W-1 and 0 < tile[1] < H-1
+                     and tile not in reserved and tile not in occupied)
+            if valid:
+                target = tile
+            else:
+                candidates = [(x,y) for y in range(1,H-1)
+                              for x in range(1,W-1)
+                              if (x,y) not in reserved and (x,y) not in occupied]
+                if not candidates:
+                    continue  # Never throw away a purchased item.
+                target = min(candidates, key=lambda cell:
+                             abs(cell[0]-tile[0])+abs(cell[1]-tile[1]))
+                entry["cell"] = target[1]*W + target[0]
+                changed += 1
+            occupied.add(target)
+        return changed
 
     def claim_preview_coins(self):
         """One-time preview gift; no save-file editing or repeat farming."""
