@@ -1,8 +1,21 @@
-# GhostPet v0.6.5 Preview — Two Pets & Cottage Friendships
+# GhostPet v0.7.0 Preview — Three Truly Different Homes
 
 A tiny original pixel creature that wanders around the desktop. Left-click it
 to bring up a retro-styled care console; right-click for its menu; drag to move.
 It works entirely offline and saves its progress locally.
+
+## What's new in v0.7.0
+
+**Three genuinely different home arrangements (not just recolors):**
+- **Woodland Cottage** keeps its original cozy four-room layout, patterned rugs, small bedroom, kitchen, sofa and nursery.
+- **Open Plan Cottage** now renders an entirely different scene: a compact private sleeping nook, long wall-to-wall kitchen, freestanding breakfast island, oversized L-shaped sofa, central coffee table, a single generous shared great room and open pet corner. Its structural walls were redesigned to match.
+- **Sunny Garden Cottage** now renders an entirely different retreat: a cedar deck and nap area to the left, and a huge glass-roofed greenhouse to the right with climbing plants, potting stands, a lily pond, and bright tiled conservatory flooring. Only a few structural glasshouse posts interrupt the open floor.
+
+Unlike the prior releases, Open Plan and Sunny Garden no longer reuse the same four-room furniture composition. The new artwork still fits the existing 18×12 map and keeps the desktop house size and pet sizes unchanged.
+
+**Renovations respect saved belongings:** Switching between floor plans preserves every purchased furniture item, coin balance, unlocked layout, and pet. If furniture occupies a newly built wall, the game moves it to the nearest free floor tile and shows a message; nothing is deleted. The one-time preview coins, dual roaming pets, friendships, cuddling, and Founder mouse remain as they were.
+
+We added headless Qt pixel-rendering tests demanding that each new home changes **more than 43% of sampled pixels** compared with the prior plan, plus tests for distinct walkable wall arrangements and automatic furniture relocation. These guard against slipping back to superficial recoloring. Update with Pocket Care → **↻ Update**, then reopen the house and switch between your owned plans.
 
 ## What's new in v0.6.5
 
