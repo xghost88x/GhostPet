@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+import time
 from collections import deque
 
 from PySide6.QtCore import Qt, QTimer, QRect
@@ -245,7 +246,7 @@ except ModuleNotFoundError as exc:
                          p.get("location","house")=="desktop"), False)
         return False
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QHBoxLayout, QLabel,
-                               QPushButton, QVBoxLayout, QWidget)
+                               QPushButton, QProgressBar, QVBoxLayout, QWidget)
 
 # Optional imports keep older v0.5.4 updater installations working.
 try:
@@ -258,6 +259,10 @@ try:
     from adopted_sprites import draw_adopted_pet as draw_housemate_sprite
 except ImportError:
     draw_housemate_sprite = None
+
+from pet_presence import (FOUNDER, active_desktop_ids, sync_locations,
+                          relationship_pairs, relationship_score,
+                          strengthen_friendship, relationship_title, pet_name)
 
 TILE = 32
 W, H = 18, 12
@@ -366,15 +371,16 @@ class HouseCanvas(QWidget):
                 self.draw_furniture(p, pos[0] * TILE, pos[1] * TILE, entry.get("item"))
         # desktop_pet_id is authoritative. Saved household dictionaries can
         # retain an old "house" field; never draw the active desktop pet twice.
-        active_id = getattr(self.dialog.state, "desktop_pet_id", "founder")
-        if (self.dialog.state.location == "house"
-                and active_id != "founder"
-                and self.dialog.state.egg_hatched):
+        active_ids = set(active_desktop_ids(self.dialog.state))
+        if (FOUNDER not in active_ids and self.dialog.state.egg_hatched):
             self.draw_pet(p)
         for housemate in self.dialog.state.adopted_pets or []:
-            if (housemate.get("id") != active_id
-                    and housemate.get("location", "house") != "desktop"):
+            if housemate.get("id") not in active_ids:
                 self.draw_housemate(p, housemate)
+        if self.dialog.friend_heart_until > time.monotonic():
+            p.setPen(QColor("#e77896"))
+            p.setFont(QFont("Sans",16,QFont.Weight.Bold))
+            p.drawText(270,195,"♥")
         if self.dialog.mode == "Decorate":
             p.setPen(QPen(QColor("#bdb1e0"), 1, Qt.PenStyle.DotLine))
             for x in range(1, W - 1):
@@ -476,6 +482,8 @@ class HouseDialog(QDialog):
         self.path = []
         self.activity = ""
         self.idle_ticks = 0
+        self.friend_heart_until = 0.0
+        self.last_house_bond = 0.0
         if not self.state.housewarming_granted:
             self.state.coins = max(200, self.state.coins)
             self.state.housewarming_granted = True
@@ -536,6 +544,18 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
         self.status.setWordWrap(True)
         self.status.setMinimumHeight(24)
         body.addWidget(self.status)
+        friend_row = QHBoxLayout()
+        friend_row.addWidget(QLabel("♡ Pet friendships:"))
+        self.friend_selector = QComboBox()
+        self.friend_selector.currentIndexChanged.connect(self.update_friendship)
+        friend_row.addWidget(self.friend_selector,1)
+        self.friend_bar = QProgressBar()
+        self.friend_bar.setRange(0,100)
+        self.friend_bar.setMaximumWidth(132)
+        friend_row.addWidget(self.friend_bar)
+        body.addLayout(friend_row)
+        self.friend_status = QLabel("Friendships grow while pets share the house.")
+        body.addWidget(self.friend_status)
         self.preview_button = QPushButton("🎁 Claim 600 preview coins")
         self.preview_button.setToolTip("One-time test reward to try both house upgrades and furniture")
         self.preview_button.clicked.connect(self.claim_preview_coins)
@@ -662,15 +682,34 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
                  for tile in [self.entry_tile(entry)] if tile is not None}
         return owned | built_in_occupied(self.state.house_layout)
 
+    def update_friendship(self, _index=None):
+        ids = self.friend_selector.currentData()
+        if ids and len(ids)==2:
+            score = relationship_score(self.state, *ids)
+            self.friend_bar.setValue(round(score))
+            self.friend_status.setText(
+                f"♡ {relationship_title(score)} • {round(score)}/100"
+                " — also grows when they're indoors together")
+        else:
+            self.friend_bar.setValue(0)
+            self.friend_status.setText("Adopt a second pet to see their friendship.")
+
     def refresh(self):
-        # Repair stale presence flags when Pocket Care changes the roaming pet
-        # while the cottage window is open.
-        active_id = getattr(self.state, "desktop_pet_id", "founder")
-        for housemate in self.state.adopted_pets or []:
-            expected = "desktop" if housemate.get("id") == active_id else "house"
-            if housemate.get("location") != expected:
-                housemate["location"] = expected
+        # One authoritative two-slot roster, regardless of stale saved flags.
+        sync_locations(self.state)
         self.balance.setText(f"🪙 {self.state.coins}")
+        previous = self.friend_selector.currentData()
+        pairs = relationship_pairs(self.state)
+        self.friend_selector.blockSignals(True)
+        self.friend_selector.clear()
+        for a,b in pairs:
+            self.friend_selector.addItem(
+                f"{pet_name(self.state,a)} + {pet_name(self.state,b)}", (a,b))
+        if previous in pairs:
+            self.friend_selector.setCurrentIndex(pairs.index(previous))
+        self.friend_selector.blockSignals(False)
+        self.friend_selector.setEnabled(bool(pairs))
+        self.update_friendship()
         self.preview_button.setVisible(not self.state.preview_coins_claimed)
         self.door_button.setText("↗ Bring selected pet outside" if current_pet(self.state) is False
                                 else "⌂ Send desktop pet home")
@@ -742,6 +781,26 @@ border-radius:6px;padding:8px} QPushButton:hover{background:#5f8268}""")
             return
         # Housemates keep exploring even when the founder is outside.
         occupied = self.blocked()
+        indoors = [pid for pid in [FOUNDER]+
+                   [p.get("id") for p in (self.state.adopted_pets or [])]
+                   if pid not in active_desktop_ids(self.state)]
+        if len(indoors) >= 2 and time.monotonic() - self.last_house_bond > 14:
+            positions = {FOUNDER:self.position}
+            positions.update({p.get("id"):(int(p.get("x",12)),int(p.get("y",8)))
+                              for p in (self.state.adopted_pets or [])
+                              if isinstance(p,dict)})
+            close = [(a,b) for i,a in enumerate(indoors)
+                     for b in indoors[i+1:]
+                     if a in positions and b in positions and
+                     abs(positions[a][0]-positions[b][0])+
+                     abs(positions[a][1]-positions[b][1])<=3]
+            if close and random.random() < .12:
+                a,b = random.choice(close)
+                strengthen_friendship(self.state, a, b, .8)
+                self.last_house_bond = time.monotonic()
+                self.friend_heart_until = time.monotonic() + 2.5
+                self.save()
+                self.update_friendship()
         for pet in self.state.adopted_pets or []:
             if pet.get("location", "house") == "house" and random.random() < .18:
                 x, y = int(pet.get("x",12)), int(pet.get("y",8))
