@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.0-preview — Cozy Cottage & Desktop Pet Selection
+
+- Rework the house's visual rendering with original wood planks, rugs, cozy decor, shelves, windows, plants, warm walls and redesigned little furniture.
+- Make the desktop house portal a non-spooky woodland cottage.
+- Keep the approved Founder mouse's outdoor sprite untouched and give her a matching small indoor sprite.
+- Add Pocket Care's **Bring selected pet to desktop** button with independent saved location and roaming state for adopted pets.
+- Keep only one companion outside at a time; the other household pets remain visible inside the cottage.
+- Preserve pets, coins, care stats, nursery, house layouts, furniture, and original save structure.
+- Add fallback rendering and pet-presence code so the older one-click updater can safely install v0.6.
+- Add offscreen Qt GUI smoke tests in addition to pathfinding, updater, save and installer tests.
+
+
 ## v0.5.4-preview — Zorin Launcher & Updates
 
 - Add a friendly original Ghost Pet mouse icon (SVG) and a one-time no-root installer.
