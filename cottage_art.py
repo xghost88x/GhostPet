@@ -195,18 +195,7 @@ def pixel_cottage(p, layout, walls):
     box(p,509,295,5,5,"#be8966")
     draw_room_vignettes(p, layout)
     draw_upgrade_features(p, layout)
-    # Small carved name plaques to replace large overlaid map captions.
-    names = {
-        "cottage": (("BEDROOM",48,59),("LIVING",320,54),("KITCHEN",40,207),("NURSERY",324,210)),
-        "open": (("BEDROOM",48,59),("OPEN LOUNGE",312,54),("KITCHEN",40,207),("NURSERY",324,210)),
-        "garden": (("BEDROOM",48,59),("SUNNY LOUNGE",309,54),("KITCHEN",40,207),("GARDEN",330,210)),
-    }
-    p.setFont(QFont("Sans",8,QFont.Weight.Bold))
-    for label,x,y in names.get(layout,names["cottage"]):
-        box(p,x-4,y-11,len(label)*7+10,17,"#e9d8b6")
-        box(p,x-2,y-9,len(label)*7+6,13,"#c0a27a")
-        p.setPen(QColor("#594a38"))
-        p.drawText(x,y+1,label)
+    # Rooms are identified visually by their furniture, never text overlays.
 
 
 def cottage_item(p, px, py, item, tint):
@@ -535,14 +524,6 @@ def _new_plan_shell(p, walls, window_color="#a8d2c8"):
         window(p,547,yy,28)
 
 
-def _room_sign(p, label, x, y, width=125, accent="#987750"):
-    box(p,x+2,y+2,width,21,"#654e3a")
-    box(p,x,y,width,19,accent)
-    p.setPen(QColor("#fff1cf"))
-    p.setFont(QFont("Sans", 9, QFont.Weight.Bold))
-    p.drawText(x+8,y+14,label)
-
-
 def _plank_floor(p, base, board, stripe):
     box(p,0,0,576,384,base)
     for yy in range(32,353,18):
@@ -574,7 +555,6 @@ def draw_open_plan_home(p, walls):
     box(p,155,94,24,20,"#916d50")
     box(p,157,92,19,15,"#c6a077")
     box(p,164,86,7,8,"#fff1b5")
-    _room_sign(p,"SLEEPING NOOK",40,40,146,"#b48d71")
     # Kitchen is in a totally different place from Woodland: long upper
     # wall counter, wide breakfast island and stools.
     box(p,221,42,310,58,"#8a6b51")
@@ -637,8 +617,6 @@ def draw_open_plan_home(p, walls):
     # A few open plan highlights.
     plant(p,497,198)
     bookcase(p,477,102)
-    _room_sign(p,"OPEN LIVING + DINING",260,201,217,"#78977e")
-    _room_sign(p,"FULL KITCHEN",286,103,158,"#ab8962")
     p.restore()
     _new_plan_shell(p,walls)
 
@@ -720,7 +698,5 @@ def draw_sunny_garden_home(p, walls):
     for xx,col in ((350,"#628e62"),(386,"#afbe7e"),(422,"#669a70"),(458,"#d0b77d")):
         box(p,xx,158,27,14,col)
         box(p,xx+6,151,14,8,"#92bc86")
-    _room_sign(p,"CEDAR RETREAT",60,40,153,"#967253")
-    _room_sign(p,"SUNLIT GLASS GARDEN",317,40,206,"#5f977e")
     p.restore()
     _new_plan_shell(p,walls)
