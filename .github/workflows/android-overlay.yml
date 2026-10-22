@@ -1,0 +1,47 @@
+name: Android floating-pets APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-overlay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android-overlay:
+    name: Compile Android floating pet prototype
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Install Android 35 platform and tools
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Assemble the Android debug APK
+        run: gradle -p android --no-daemon --stacktrace assembleDebug
+      - name: Verify APK exists and no desktop save is packaged
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          if unzip -Z1 android/app/build/outputs/apk/debug/app-debug.apk | grep -E '(^|/)state\.json$'; then
+            echo "ERROR: desktop save included in APK"
+            exit 1
+          fi
+          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MiniMenaces-Android-Prototype-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
