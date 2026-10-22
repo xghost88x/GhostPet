@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
@@ -31,7 +32,13 @@ public final class FloatingPetsService extends Service {
     private final PetView[] pets=new PetView[2];
     private final WindowManager.LayoutParams[] params=new WindowManager.LayoutParams[2];
     private final int[] facing = {1,-1};
-    private final int[] ticksUntilTurn = {24,36};
+    private final int[] travelTicks = {32,44};
+    private final int[] idleTicks = {0,14};
+    private final int[] verticalSign = {1,-1};
+    private long socialUntil = 0L;
+    private long lastSocialAt = 0L;
+    private long approachUntil = 0L;
+    private long lastApproachAt = 0L;
     private WindowManager windowManager;
     private SharedPreferences prefs;
     private boolean running=false;
@@ -129,7 +136,9 @@ public final class FloatingPetsService extends Service {
                 lp.y=prefs.getInt("y"+i,screenHeight-height-dp(135));
                 constrain(lp);
                 params[i]=lp;
+                pets[i].setDirection(facing[i]);
                 pets[i].setOnMove((dx,dy,save) -> movePet(idx,dx,dy,save));
+                pets[i].setOnPetTap(doubleTap -> reactToTap(idx,doubleTap));
                 windowManager.addView(pets[i],lp);
             }
         } catch (RuntimeException error) {
@@ -137,6 +146,7 @@ public final class FloatingPetsService extends Service {
             throw error;
         }
         running=true;
+        lastSocialAt=SystemClock.uptimeMillis()-3500L;
         handler.post(ticker);
     }
 
@@ -159,31 +169,147 @@ public final class FloatingPetsService extends Service {
         }
     }
 
+    private boolean nearEachOther() {
+        if (params[0] == null || params[1] == null) return false;
+        int dx=Math.abs(params[0].x-params[1].x);
+        int dy=Math.abs(params[0].y-params[1].y);
+        return dx <= dp(138) && dy <= dp(95);
+    }
+
+    private void faceBuddy() {
+        if (params[0] == null || params[1] == null) return;
+        facing[0] = params[1].x >= params[0].x ? 1 : -1;
+        facing[1] = -facing[0];
+        for(int i=0;i<2;i++) if (pets[i]!=null)
+            pets[i].setDirection(facing[i]);
+    }
+
+    private void startSocial(int pose, long duration, long now) {
+        if (pets[0] == null || pets[1] == null ||
+            pets[0].isBeingTouched() || pets[1].isBeingTouched()) return;
+        faceBuddy();
+        socialUntil = now+duration;
+        lastSocialAt = now;
+        approachUntil = 0L;
+        pets[0].setWalking(false);
+        pets[1].setWalking(false);
+        pets[0].react(pose,duration);
+        pets[1].react(pose,duration);
+    }
+
+    private void reactToTap(int petId,boolean doubleTap) {
+        if (pets[petId] == null) return;
+        final int friendId=1-petId;
+        final long now=SystemClock.uptimeMillis();
+        // Tap the cat: the mouse can wave back! Double-tap near the buddy
+        // to trigger an entire two-pet dance, all inside the existing overlays.
+        if (nearEachOther() && pets[friendId] != null &&
+            !pets[friendId].isBeingTouched()) {
+            if (doubleTap) {
+                faceBuddy();
+                pets[petId].react(PetView.DANCE,1900);
+                pets[friendId].react(PetView.DANCE,1900);
+                socialUntil=now+1900;
+                lastSocialAt=now;
+            } else {
+                pets[friendId].react(PetView.GREET,1300);
+            }
+        } else if (doubleTap) {
+            pets[petId].react(PetView.PLAY,1550);
+        }
+    }
+
+    private void explore(int index,long now) {
+        if (pets[index] == null || pets[index].isBeingTouched() ||
+            params[index] == null) return;
+        PetView pet=pets[index];
+        if (now<socialUntil) {
+            pet.setWalking(false);
+            return;
+        }
+        // Every few seconds the pair deliberately seeks one another, then
+        // switches to social choreography at close range.
+        if (now<approachUntil && !nearEachOther() &&
+            params[1-index]!=null) {
+            int deltaX=params[1-index].x-params[index].x;
+            int deltaY=params[1-index].y-params[index].y;
+            if(Math.abs(deltaX)>dp(111) || Math.abs(deltaY)>dp(62)) {
+                int x=Math.abs(deltaX)>dp(111) ? (deltaX>0?dp(3):-dp(3)):0;
+                int y=Math.abs(deltaY)>dp(62) ? (deltaY>0?dp(2):-dp(2)):0;
+                if(x!=0) {
+                    facing[index]=x>0?1:-1;
+                    pet.setDirection(facing[index]);
+                }
+                pet.setWalking(x!=0 || y!=0);
+                movePet(index,x,y,false);
+                return;
+            }
+        }
+        if (idleTicks[index]>0) {
+            idleTicks[index]--;
+            pet.setWalking(false);
+            return;
+        }
+        if (--travelTicks[index]<=0) {
+            if (random.nextInt(3)!=0) facing[index]*=-1;
+            pet.setDirection(facing[index]);
+            idleTicks[index]=4+random.nextInt(14);
+            travelTicks[index]=18+random.nextInt(43);
+            verticalSign[index]=random.nextBoolean()?1:-1;
+            pet.setWalking(false);
+            return;
+        }
+        pet.setWalking(true);
+        int y=(ticks%12==0)?verticalSign[index]*dp(2):0;
+        movePet(index,facing[index]*dp(2),y,false);
+        // Reverse at the physical edge instead of sticking to it.
+        if (params[index].x==0 ||
+            params[index].x>=Math.max(0,screenWidth-params[index].width)) {
+            facing[index]*=-1;
+            pet.setDirection(facing[index]);
+        }
+    }
+
+    private void maybeSocialize(long now) {
+        if (now<socialUntil || pets[0]==null || pets[1]==null ||
+            pets[0].isBeingTouched() || pets[1].isBeingTouched()) return;
+        if (nearEachOther() && now-lastSocialAt>8500L) {
+            int[] activities={PetView.GREET, PetView.NUZZLE,
+                              PetView.PLAY, PetView.DANCE};
+            startSocial(activities[random.nextInt(activities.length)],
+                        2100+random.nextInt(900),now);
+        } else if (!nearEachOther() && now-lastApproachAt>15000L) {
+            // Short approach bursts; never move or inspect other apps' input.
+            approachUntil=now+7000L;
+            lastApproachAt=now;
+        }
+    }
+
     private final Runnable ticker = new Runnable() {
         @Override public void run() {
             if (!running) return;
+            if (!Settings.canDrawOverlays(FloatingPetsService.this)) {
+                stopSelf(); // Permission can be revoked while the pets roam.
+                return;
+            }
             ticks++;
-            for(int i=0;i<2;i++) {
+            final long now=SystemClock.uptimeMillis();
+            if (ticks % 4 == 0) maybeSocialize(now);
+            for (int i=0;i<2;i++) {
                 PetView pet=pets[i];
                 if(pet==null) continue;
+                if(ticks%2==0) explore(i,now);
                 pet.animate(ticks);
-                // Roam gently to avoid battery drain and not interfere with taps.
-                if (ticks%5==0 && !pet.isBeingDragged()) {
-                    ticksUntilTurn[i]--;
-                    if(ticksUntilTurn[i]<=0) {
-                        facing[i]*=-1;
-                        ticksUntilTurn[i]=20+random.nextInt(50);
-                    }
-                    movePet(i,facing[i]*dp(2),0,false);
-                }
             }
             if(ticks%80==0) {
-                for(int i=0;i<2;i++) if(params[i]!=null && prefs!=null) {
-                    prefs.edit().putInt("x"+i,params[i].x)
-                               .putInt("y"+i,params[i].y).apply();
+                SharedPreferences.Editor editor=prefs.edit();
+                for (int i=0;i<2;i++) if(params[i]!=null) {
+                    editor.putInt("x"+i,params[i].x);
+                    editor.putInt("y"+i,params[i].y);
                 }
+                editor.apply();
             }
-            handler.postDelayed(this,120);
+            handler.postDelayed(this,110);
         }
     };
 
