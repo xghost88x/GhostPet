@@ -56,7 +56,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag="android-overlay-v0.1.0-preview"
+          tag="android-overlay-v0.2.0-preview"
           src="android/app/build/outputs/apk/debug/app-debug.apk"
           cp "$src" "MiniMenaces-Android-Preview.apk"
           if gh release view "$tag" >/dev/null 2>&1; then
@@ -65,6 +65,6 @@ jobs:
             gh release create "$tag" MiniMenaces-Android-Preview.apk \
               --target "$GITHUB_SHA" \
               --prerelease \
-              --title "Mini Menaces Android Overlay Preview v0.1" \
-              --notes "Early Android overlay prototype for testing two floating pixel pets. Download MiniMenaces-Android-Preview.apk directly from this release on your phone. No GitHub login required. Grant Display over other apps manually in Android settings, then open Mini Menaces and tap Let pets roam. This is debug-signed, is not the full cottage game, and may require uninstall before updating future previews because debug signing keys can change."
+              --title "Mini Menaces Android Overlay Preview v0.2" \
+              --notes "Android overlay v0.2: fixes clipped hearts and adds walking, blinking, tails, greetings, nuzzles, and a two-pet dance. Download MiniMenaces-Android-Preview.apk directly from this release on your phone. No GitHub login required. Grant Display over other apps manually in Android settings, then open Mini Menaces and tap Let pets roam. This is debug-signed, is not the full cottage game, and may require uninstall before updating future previews because debug signing keys can change."
           fi
