@@ -176,8 +176,9 @@ public final class FloatingPetsService extends Service {
     }
 
     private void constrain(WindowManager.LayoutParams lp) {
-        lp.x=Math.max(0,Math.min(lp.x,Math.max(0,screenWidth-lp.width)));
-        lp.y=Math.max(dp(24),Math.min(lp.y,Math.max(dp(24),screenHeight-lp.height-dp(35))));
+        lp.x=PetMotionRules.clamp(lp.x,0,Math.max(0,screenWidth-lp.width));
+        lp.y=PetMotionRules.clamp(lp.y,dp(24),
+                Math.max(dp(24),screenHeight-lp.height-dp(35)));
     }
 
     private void movePet(int i,int dx,int dy,boolean save) {
@@ -196,9 +197,9 @@ public final class FloatingPetsService extends Service {
 
     private boolean nearEachOther() {
         if (params[0] == null || params[1] == null) return false;
-        int dx=Math.abs(params[0].x-params[1].x);
-        int dy=Math.abs(params[0].y-params[1].y);
-        return dx <= dp(138) && dy <= dp(95);
+        return PetMotionRules.areNear(
+            params[0].x,params[0].y,params[1].x,params[1].y,
+            dp(138),dp(95));
     }
 
     private void faceBuddy() {
@@ -292,7 +293,8 @@ public final class FloatingPetsService extends Service {
         if(story==STORY_SWAT) {
             if(elapsed<820L && ticks%2==0) {
                 // The mouse hops *away* from the cat's paw, not through it.
-                movePet(0,-facing[0]*dp(4),0,false);
+                movePet(0,PetMotionRules.retreatDirection(
+                    params[0].x,params[1].x)*dp(4),0,false);
             } else if(elapsed>=900L && storyPhase==0) {
                 storyPhase=1;
                 pets[0].react(PetView.PLAY,1750L);
@@ -422,7 +424,8 @@ public final class FloatingPetsService extends Service {
         }
 
         // An independent, occasional zoomie attack. Not constant screen racing.
-        if(now-lastZoomAt>47000L && random.nextInt(12)==0) {
+        if(PetMotionRules.zoomCooldownPassed(now,lastZoomAt,47000L) &&
+           random.nextInt(12)==0) {
             beginStory(STORY_ZOOM,now);
             return;
         }
