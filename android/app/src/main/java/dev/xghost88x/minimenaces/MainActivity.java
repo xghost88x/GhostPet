@@ -42,7 +42,7 @@ public final class MainActivity extends Activity {
         TextView heading = text("🐭 Mini Menaces 🐱",25,Color.rgb(248,216,238));
         heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         root.addView(heading);
-        TextView sub = text("Floating Android Preview · v0.1",15,Color.rgb(196,213,224));
+        TextView sub = text("Floating Android Preview · v0.2",15,Color.rgb(196,213,224));
         root.addView(sub);
 
         TextView explanation = text(
