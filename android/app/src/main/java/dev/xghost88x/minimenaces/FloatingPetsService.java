@@ -25,6 +25,8 @@ import java.util.Random;
 public final class FloatingPetsService extends Service {
     public static final String ACTION_START = "dev.xghost88x.minimenaces.START";
     public static final String ACTION_STOP = "dev.xghost88x.minimenaces.STOP";
+    public static final String ACTION_SURPRISE = "dev.xghost88x.minimenaces.SURPRISE";
+    public static final String ACTION_ZOOM = "dev.xghost88x.minimenaces.ZOOM";
     private static final String CHANNEL = "mini_menaces_roaming";
 
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -39,6 +41,15 @@ public final class FloatingPetsService extends Service {
     private long lastSocialAt = 0L;
     private long approachUntil = 0L;
     private long lastApproachAt = 0L;
+    // One short interaction at a time; user dragging always wins.
+    private static final int STORY_NONE=0, STORY_SWAT=1, STORY_NUZZLE=2,
+                             STORY_CUDDLE=3, STORY_ZOOM=4;
+    private int story=STORY_NONE;
+    private int storyPhase=-1;
+    private long storyStart=0L;
+    private long lastZoomAt=0L;
+    private int queuedStory=STORY_NONE;
+    private long queueExpiresAt=0L;
     private WindowManager windowManager;
     private SharedPreferences prefs;
     private boolean running=false;
@@ -60,7 +71,20 @@ public final class FloatingPetsService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (running) return START_NOT_STICKY;
+        if (running) {
+            if (intent != null && ACTION_SURPRISE.equals(intent.getAction())) {
+                requestSurprise();
+            } else if (intent != null && ACTION_ZOOM.equals(intent.getAction())) {
+                beginStory(STORY_ZOOM,SystemClock.uptimeMillis());
+            }
+            return START_NOT_STICKY;
+        }
+        // Activity buttons cannot secretly start an overlay service. The
+        // explicit "Let pets roam" button remains the only start action.
+        if (intent != null && !ACTION_START.equals(intent.getAction())) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         try {
             startRoaming();
         } catch (Exception error) {
@@ -147,6 +171,7 @@ public final class FloatingPetsService extends Service {
         }
         running=true;
         lastSocialAt=SystemClock.uptimeMillis()-3500L;
+        lastZoomAt=SystemClock.uptimeMillis();
         handler.post(ticker);
     }
 
@@ -188,6 +213,7 @@ public final class FloatingPetsService extends Service {
         if (pets[0] == null || pets[1] == null ||
             pets[0].isBeingTouched() || pets[1].isBeingTouched()) return;
         faceBuddy();
+        story=STORY_NONE;
         socialUntil = now+duration;
         lastSocialAt = now;
         approachUntil = 0L;
@@ -197,10 +223,119 @@ public final class FloatingPetsService extends Service {
         pets[1].react(pose,duration);
     }
 
+    private void requestSurprise() {
+        if (!running || pets[0] == null || pets[1] == null) return;
+        int[] variants={STORY_SWAT,STORY_NUZZLE,STORY_CUDDLE};
+        int next=variants[random.nextInt(variants.length)];
+        long now=SystemClock.uptimeMillis();
+        if (nearEachOther()) {
+            beginStory(next,now);
+        } else {
+            // No teleporting: invite the pets together first.
+            queuedStory=next;
+            queueExpiresAt=now+18000L;
+            approachUntil=now+18000L;
+            lastApproachAt=now;
+            socialUntil=0;
+            story=STORY_NONE;
+        }
+    }
+
+    private void beginStory(int kind,long now) {
+        if (!running || pets[0] == null || pets[1] == null ||
+            pets[0].isBeingTouched() || pets[1].isBeingTouched()) return;
+        if (kind != STORY_ZOOM && !nearEachOther()) return;
+        queuedStory=STORY_NONE;
+        approachUntil=0L;
+        story=kind;
+        storyPhase=0;
+        storyStart=now;
+        lastSocialAt=now;
+        for(int i=0;i<2;i++) pets[i].setWalking(false);
+        if(kind==STORY_SWAT) {
+            faceBuddy();
+            socialUntil=now+2700L;
+            pets[1].react(PetView.SWAT,900L); // the orange cat
+            pets[0].react(PetView.STARTLED,900L); // startled mouse
+        } else if(kind==STORY_NUZZLE) {
+            faceBuddy();
+            socialUntil=now+2600L;
+            pets[0].react(PetView.NUZZLE,2600L);
+            pets[1].react(PetView.NUZZLE,2600L);
+        } else if(kind==STORY_CUDDLE) {
+            faceBuddy();
+            socialUntil=now+6200L;
+            pets[0].react(PetView.NUZZLE,1000L);
+            pets[1].react(PetView.NUZZLE,1000L);
+        } else if(kind==STORY_ZOOM) {
+            socialUntil=now+3850L;
+            lastZoomAt=now;
+            pets[1].react(PetView.ZOOMIES,3850L);
+            if(nearEachOther()) pets[0].react(PetView.STARTLED,1150L);
+        }
+    }
+
+    private void advanceStory(long now) {
+        if(story==STORY_NONE) return;
+        if (pets[0]==null || pets[1]==null ||
+            pets[0].isBeingTouched() || pets[1].isBeingTouched()) {
+            // Hands-off interactions never fight the user's touch/drag.
+            story=STORY_NONE;
+            socialUntil=0L;
+            return;
+        }
+        if(now>=socialUntil) {
+            story=STORY_NONE;
+            return;
+        }
+        long elapsed=now-storyStart;
+        if(story==STORY_SWAT) {
+            if(elapsed<820L && ticks%2==0) {
+                // The mouse hops *away* from the cat's paw, not through it.
+                movePet(0,-facing[0]*dp(4),0,false);
+            } else if(elapsed>=900L && storyPhase==0) {
+                storyPhase=1;
+                pets[0].react(PetView.PLAY,1750L);
+                pets[1].react(PetView.GREET,1750L);
+            }
+        } else if(story==STORY_NUZZLE || story==STORY_CUDDLE) {
+            // A few shy little cheek-rubs bring two windows closer without
+            // pushing the sprites outside their transparent bounding boxes.
+            if(elapsed<900L && ticks%3==0 &&
+               Math.abs(params[0].x-params[1].x)>dp(56)) {
+                movePet(0,facing[0]*dp(2),0,false);
+                movePet(1,facing[1]*dp(2),0,false);
+            }
+            if(story==STORY_CUDDLE && elapsed>=1000L && storyPhase==0) {
+                storyPhase=1;
+                pets[0].react(PetView.CURL_UP,5100L);
+                pets[1].react(PetView.CURL_UP,5100L);
+            }
+        } else if(story==STORY_ZOOM) {
+            // Short playful sprints within ordinary display bounds, with
+            // occasional zig-zags. No cursor or cross-app touch monitoring.
+            if(ticks%2==0) {
+                if(ticks%10==0) {
+                    facing[1]*=-1;
+                    verticalSign[1]*=-1;
+                }
+                pets[1].setDirection(facing[1]);
+                movePet(1,facing[1]*dp(9),verticalSign[1]*dp(3),false);
+                int right=Math.max(0,screenWidth-params[1].width);
+                if(params[1].x==0 || params[1].x>=right) facing[1]*=-1;
+            }
+        }
+    }
+
     private void reactToTap(int petId,boolean doubleTap) {
         if (pets[petId] == null) return;
         final int friendId=1-petId;
         final long now=SystemClock.uptimeMillis();
+        // Touching a pet interrupts its current story without stealing drag.
+        if(story!=STORY_NONE) {
+            story=STORY_NONE;
+            socialUntil=0L;
+        }
         // Tap the cat: the mouse can wave back! Double-tap near the buddy
         // to trigger an entire two-pet dance, all inside the existing overlays.
         if (nearEachOther() && pets[friendId] != null &&
@@ -214,6 +349,9 @@ public final class FloatingPetsService extends Service {
             } else {
                 pets[friendId].react(PetView.GREET,1300);
             }
+        } else if (doubleTap && petId==1) {
+            // For easy testing, double-tap a solo cat to start zoomies.
+            beginStory(STORY_ZOOM,now);
         } else if (doubleTap) {
             pets[petId].react(PetView.PLAY,1550);
         }
@@ -273,13 +411,33 @@ public final class FloatingPetsService extends Service {
     private void maybeSocialize(long now) {
         if (now<socialUntil || pets[0]==null || pets[1]==null ||
             pets[0].isBeingTouched() || pets[1].isBeingTouched()) return;
-        if (nearEachOther() && now-lastSocialAt>8500L) {
-            int[] activities={PetView.GREET, PetView.NUZZLE,
-                              PetView.PLAY, PetView.DANCE};
-            startSocial(activities[random.nextInt(activities.length)],
-                        2100+random.nextInt(900),now);
+
+        // Prefer queued manual interactions once the duo reach one another.
+        if(queuedStory!=STORY_NONE) {
+            if(now>queueExpiresAt) queuedStory=STORY_NONE;
+            else if(nearEachOther()) {
+                beginStory(queuedStory,now);
+                return;
+            } else return;
+        }
+
+        // An independent, occasional zoomie attack. Not constant screen racing.
+        if(now-lastZoomAt>47000L && random.nextInt(12)==0) {
+            beginStory(STORY_ZOOM,now);
+            return;
+        }
+        if (nearEachOther() && now-lastSocialAt>9500L) {
+            int choice=random.nextInt(7);
+            if(choice==0) beginStory(STORY_SWAT,now);
+            else if(choice==1) beginStory(STORY_NUZZLE,now);
+            else if(choice==2) beginStory(STORY_CUDDLE,now);
+            else {
+                int[] activities={PetView.GREET,PetView.PLAY,PetView.DANCE,
+                                  PetView.NUZZLE};
+                startSocial(activities[choice-3],
+                            2100+random.nextInt(900),now);
+            }
         } else if (!nearEachOther() && now-lastApproachAt>15000L) {
-            // Short approach bursts; never move or inspect other apps' input.
             approachUntil=now+7000L;
             lastApproachAt=now;
         }
@@ -294,6 +452,7 @@ public final class FloatingPetsService extends Service {
             }
             ticks++;
             final long now=SystemClock.uptimeMillis();
+            advanceStory(now);
             if (ticks % 4 == 0) maybeSocialize(now);
             for (int i=0;i<2;i++) {
                 PetView pet=pets[i];
