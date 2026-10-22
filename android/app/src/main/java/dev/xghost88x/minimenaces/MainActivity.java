@@ -42,7 +42,7 @@ public final class MainActivity extends Activity {
         TextView heading = text("🐭 Mini Menaces 🐱",25,Color.rgb(248,216,238));
         heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         root.addView(heading);
-        TextView sub = text("Floating Android Preview · v0.2",15,Color.rgb(196,213,224));
+        TextView sub = text("Floating Android Preview · v0.3",15,Color.rgb(196,213,224));
         root.addView(sub);
 
         TextView explanation = text(
@@ -92,6 +92,32 @@ public final class MainActivity extends Activity {
         });
         root.addView(startButton);
 
+        Button surpriseButton = button("🐾 Surprise me — pair interaction");
+        surpriseButton.setOnClickListener(v -> {
+            if (!Settings.canDrawOverlays(this)) {
+                refreshStatus();
+                return;
+            }
+            Intent action = new Intent(this,FloatingPetsService.class);
+            action.setAction(FloatingPetsService.ACTION_SURPRISE);
+            startService(action);
+            status.setText("The pets are preparing a surprise! Bring them together. 💕");
+        });
+        root.addView(surpriseButton);
+
+        Button zoomButton = button("🐱 Orange-cat zoomies!");
+        zoomButton.setOnClickListener(v -> {
+            if (!Settings.canDrawOverlays(this)) {
+                refreshStatus();
+                return;
+            }
+            Intent action = new Intent(this,FloatingPetsService.class);
+            action.setAction(FloatingPetsService.ACTION_ZOOM);
+            startService(action);
+            status.setText("Brace yourself. Cat zoomies initiated! 😈");
+        });
+        root.addView(zoomButton);
+
         Button stopButton = button("⌂ Send pets home");
         stopButton.setOnClickListener(v -> {
             Intent pet = new Intent(this,FloatingPetsService.class);
@@ -102,7 +128,9 @@ public final class MainActivity extends Activity {
         });
         root.addView(stopButton);
         TextView info = text(
-            "Tap a pet for hearts, drag to move it, or let it explore.\n\n"
+            "Tap for hearts, double-tap for play, or for dancing when nearby.\n"
+          + "A solo cat double-tap starts zoomies!\n"
+          + "Surprise me starts swats, head nuzzles or sleepy cuddles.\n\n"
           + "This is an overlay-only prototype. The full desktop cottage, "
           + "coins and adoption systems aren't ported yet.\n\n"
           + "No screen recording, accessibility access or other app data needed.",
