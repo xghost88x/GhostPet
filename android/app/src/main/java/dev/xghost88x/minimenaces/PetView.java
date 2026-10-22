@@ -25,6 +25,10 @@ public final class PetView extends View {
     public static final int PLAY = 5;
     public static final int DANCE = 6;
     public static final int SLEEPY = 7;
+    public static final int SWAT = 8;
+    public static final int STARTLED = 9;
+    public static final int CURL_UP = 10;
+    public static final int ZOOMIES = 11;
 
     public interface OnMove {
         void move(int dx, int dy, boolean save);
@@ -156,11 +160,20 @@ public final class PetView extends View {
             else if (mood == PETTED || mood == GREET || mood == PLAY)
                 hop = -new int[]{0, 2, 4, 2, 0, 1, 3, 1}[frame % 8];
             else if (mood == DANCE) hop = -new int[]{1, 3, 0, 4, 1, 4, 0, 3}[frame % 8];
+            else if (mood == SWAT) hop = -new int[]{0, 1, 3, 1}[frame % 4];
+            else if (mood == STARTLED) hop = -new int[]{1, 5, 3, 0, 3, 1}[frame % 6];
+            else if (mood == ZOOMIES) hop = -new int[]{0, 2, 1, 3}[frame % 4];
             else if (mood == IDLE) hop = (frame / 11) % 2 == 0 ? 0 : -1;
         }
 
         screen.save();
-        screen.translate(0, 13 + hop);
+        if (mood == CURL_UP || mood == SLEEPY) {
+            // A low sleeping silhouette, kept clear of the emote space.
+            screen.translate(1.2f, 20);
+            screen.scale(.92f, .76f);
+        } else {
+            screen.translate(mood == STARTLED && frame % 2 == 0 ? 1 : 0, 13 + hop);
+        }
         if (direction < 0) {
             screen.translate(30, 0);
             screen.scale(-1, 1);
@@ -173,9 +186,11 @@ public final class PetView extends View {
         // extents at the top of an Android TYPE_APPLICATION_OVERLAY window.
         if (now < actionUntil) {
             String effect = mood == DANCE ? "♪" :
-                            mood == PLAY ? "✦" :
+                            mood == PLAY || mood == SWAT ? "✦" :
                             mood == GREET ? "!" :
-                            mood == SLEEPY ? "z" :
+                            mood == STARTLED ? "!!" :
+                            mood == SLEEPY || mood == CURL_UP ? "z" :
+                            mood == ZOOMIES ? "✧" :
                             (mood == PETTED || mood == NUZZLE) ? "♥" : "";
             if (!effect.isEmpty()) {
                 paint.setTypeface(Typeface.DEFAULT_BOLD);
@@ -185,9 +200,13 @@ public final class PetView extends View {
                                            : Color.rgb(246, 122, 163));
                 // All glyph baselines >=10px from top and inside the 32px width.
                 screen.drawText(effect, 17, 11, paint);
-                if (mood == PETTED || mood == NUZZLE || mood == DANCE) {
+                if (mood == PETTED || mood == NUZZLE || mood == DANCE ||
+                        mood == CURL_UP || mood == ZOOMIES) {
                     paint.setTextSize(7);
-                    screen.drawText(mood == DANCE ? "♫" : "♡", 5, 13, paint);
+                    String extra = mood == DANCE ? "♫" :
+                                   mood == CURL_UP ? "z" :
+                                   mood == ZOOMIES ? "✧" : "♡";
+                    screen.drawText(extra, 5, 13, paint);
                 }
                 paint.setAntiAlias(false);
             }
@@ -200,12 +219,14 @@ public final class PetView extends View {
         int ink = Color.rgb(66, 57, 57), fur = Color.rgb(235, 170, 106);
         int stripe = Color.rgb(167, 105, 69), cream = Color.rgb(254, 237, 203);
         int blush = Color.rgb(249, 170, 174);
-        boolean stepping = mood == WALK && (frame / 2) % 2 == 0;
+        boolean stepping = (mood == WALK || mood == ZOOMIES) && (frame / 2) % 2 == 0;
         boolean dancing = mood == DANCE;
+        boolean swatting = mood == SWAT;
+        boolean napping = mood == CURL_UP || mood == SLEEPY;
         boolean pawUp = mood == PETTED || mood == GREET || mood == PLAY
-                        || dancing || mood == NUZZLE;
-        boolean blink = frame % 103 < 4 || mood == NUZZLE || mood == SLEEPY;
-        int tailLift = (frame / 3) % 2;
+                        || dancing || mood == NUZZLE || swatting;
+        boolean blink = frame % 103 < 4 || mood == NUZZLE || napping;
+        int tailLift = (frame / (mood == ZOOMIES ? 1 : 3)) % 2;
 
         // Tail flicks, then head/ears remain distinct from the body.
         pix(c, ink, 23, 20 - tailLift, 3, 9);
@@ -242,16 +263,28 @@ public final class PetView extends View {
             pix(c, fur, 4, dancing ? 14 : 17, 3, 4);
             if (dancing) pix(c, cream, 20, 13, 4, 3);
         }
+        if (swatting) {
+            // A little outstretched, alternating paw-swipe.
+            int swipe = (frame / 2) % 2 == 0 ? 0 : 2;
+            pix(c, ink, 0, 17 + swipe, 7, 4);
+            pix(c, fur, 0, 18 + swipe, 6, 2);
+            pix(c, cream, 1, 18 + swipe, 2, 1);
+        }
+        if (napping) {
+            // Tucked paws accentuate the sleep pose (the canvas is squashed).
+            pix(c, cream, 9, 27, 13, 2);
+        }
     }
 
     private void drawMouse(Canvas c, int mood) {
         int ink = Color.rgb(57, 65, 65), fur = Color.rgb(220, 208, 235);
         int shadow = Color.rgb(158, 148, 188), pink = Color.rgb(246, 163, 181);
         int cream = Color.rgb(255, 246, 234);
-        boolean stepping = mood == WALK && (frame / 2) % 2 == 0;
+        boolean stepping = (mood == WALK || mood == STARTLED) && (frame / 2) % 2 == 0;
         boolean waving = mood == PETTED || mood == GREET ||
-                         mood == DANCE || mood == PLAY;
-        boolean blink = frame % 109 < 4 || mood == NUZZLE || mood == SLEEPY;
+                         mood == DANCE || mood == PLAY || mood == STARTLED;
+        boolean napping = mood == CURL_UP || mood == SLEEPY;
+        boolean blink = frame % 109 < 4 || mood == NUZZLE || napping;
         int flick = (frame / 4) % 2;
 
         pix(c, ink, 23, 23, 5, 2);
@@ -276,6 +309,14 @@ public final class PetView extends View {
         }
         pix(c, pink, 16, 23, 2, 2);
         pix(c, shadow, 10, 24, 3, 1); pix(c, shadow, 20, 24, 3, 1);
+        if (mood == STARTLED) {
+            // Wide surprised eyes with tiny highlights, then jump backwards.
+            pix(c, ink, 10, 18, 4, 4);
+            pix(c, ink, 19, 18, 4, 4);
+            pix(c, cream, 11, 18, 1, 1);
+            pix(c, cream, 20, 18, 1, 1);
+        }
+        if (napping) pix(c, cream, 9, 28, 14, 2);
         if (waving) {
             pix(c, ink, 5, mood == DANCE ? 13 : 18, 4, 5);
             pix(c, pink, 6, mood == DANCE ? 14 : 18, 2, 3);
